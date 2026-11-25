@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel principal | Kotoduo{% endblock %}
+{% block page_title %}Panel principal{% endblock %}
+
+{% block content %}
+
+<section class="welcome-section">
+    <div>
+        <span class="welcome-label">PLATAFORMA DE GESTIÓN</span>
+        <h1>Bienvenido a Kotoduo</h1>
+        <p>
+            Administra y supervisa las operaciones de producción
+            desde un solo lugar.
+        </p>
+    </div>
+
+    <div class="welcome-decoration">
+        <span>K</span>
+    </div>
+</section>
+
+
+<section class="dashboard-heading">
+    <div>
+        <h2>Resumen general</h2>
+        <p>Estado actual de las operaciones del sistema.</p>
+    </div>
+</section>
+
+<div class="summary-grid">
+
+    <article class="summary-card">
+        <div class="summary-top">
+            <span>Órdenes registradas</span>
+            <div class="summary-icon">▤</div>
+        </div>
+
+        <strong>{{ total_ordenes|default:"0" }}</strong>
+        <small>Total de órdenes de trabajo</small>
+    </article>
+
+
+    <article class="summary-card">
+        <div class="summary-top">
+            <span>Producción activa</span>
+            <div class="summary-icon">⚙</div>
+        </div>
+
+        <strong>{{ etapas_en_proceso|default:"0" }}</strong>
+        <small>Etapas en ejecución</small>
+    </article>
+
+
+    <article class="summary-card">
+        <div class="summary-top">
+            <span>Alertas de inventario</span>
+            <div class="summary-icon">!</div>
+        </div>
+
+        <strong>{{ alertas_pendientes|default:"0" }}</strong>
+        <small>Alertas pendientes de atención</small>
+    </article>
+
+
+    <article class="summary-card">
+        <div class="summary-top">
+            <span>Órdenes completadas</span>
+            <div class="summary-icon">✓</div>
+        </div>
+
+        <strong>{{ ordenes_completadas|default:"0" }}</strong>
+        <small>Trabajos finalizados</small>
+    </article>
+
+</div>
+
+
+<div class="dashboard-columns">
+
+    <section class="dashboard-panel">
+
+        <div class="panel-heading">
+            <div>
+                <h3>Estado de producción</h3>
+                <p>Distribución de las etapas de trabajo.</p>
+            </div>
+
+            <span class="panel-symbol">⚙</span>
+        </div>
+
+
+        <div class="production-stat">
+            <div>
+                <span>Pendientes</span>
+                <strong>{{ etapas_pendientes|default:"0" }}</strong>
+            </div>
+
+            <div class="progress-track">
+                <div
+                    class="progress-fill pending"
+                    data-progress="{{ porcentaje_pendientes|default:0 }}">
+                </div>
+            </div>
+        </div>
+
+
+        <div class="production-stat">
+            <div>
+                <span>En proceso</span>
+                <strong>{{ etapas_en_proceso|default:"0" }}</strong>
+            </div>
+
+            <div class="progress-track">
+                <div
+                    class="progress-fill ongoing"
+                    data-progress="{{ porcentaje_en_proceso|default:0 }}">
+                </div>
+            </div>
+        </div>
+
+
+        <div class="production-stat">
+            <div>
+                <span>Completadas</span>
+                <strong>{{ etapas_completadas|default:"0" }}</strong>
+            </div>
+
+            <div class="progress-track">
+                <div
+                    class="progress-fill completed"
+                    data-progress="{{ porcentaje_completadas|default:0 }}">
+                </div>
+            </div>
+        </div>
+
+
+        <div class="production-stat">
+            <div>
+                <span>Bloqueadas</span>
+                <strong>{{ etapas_bloqueadas|default:"0" }}</strong>
+            </div>
+
+            <div class="progress-track">
+                <div
+                    class="progress-fill blocked"
+                    data-progress="{{ porcentaje_bloqueadas|default:0 }}">
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <section class="dashboard-panel">
+
+        <div class="panel-heading">
+            <div>
+                <h3>Inventario</h3>
+                <p>Situación general de los insumos.</p>
+            </div>
+
+            <span class="panel-symbol">◫</span>
+        </div>
+
+
+        <div class="inventory-highlight">
+            <span>Insumos registrados</span>
+            <strong>{{ total_insumos|default:"0" }}</strong>
+        </div>
+
+
+        <div class="inventory-details">
+
+            <div>
+                <span class="inventory-dot normal"></span>
+                Insumos con stock suficiente
+
+                <strong>
+                    {{ insumos_disponibles|default:"0" }}
+                </strong>
+            </div>
+
+
+            <div>
+                <span class="inventory-dot warning"></span>
+                Insumos con stock bajo
+
+                <strong>
+                    {{ insumos_stock_bajo|default:"0" }}
+                </strong>
+            </div>
+
+
+            <div>
+                <span class="inventory-dot danger"></span>
+                Alertas pendientes
+
+                <strong>
+                    {{ alertas_pendientes|default:"0" }}
+                </strong>
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+{% if puede_ver_actividad %}
+
+<section class="dashboard-panel activity-panel">
+
+    <div class="panel-heading">
+        <div>
+            <h3>Actividad reciente</h3>
+            <p>Últimos movimientos registrados en el sistema.</p>
+        </div>
+
+        <span class="panel-symbol">◷</span>
+    </div>
+
+
+    {% for actividad in actividades_recientes %}
+
+        <div class="activity-item">
+
+            <div class="activity-marker"></div>
+
+            <div class="activity-description">
+
+                <strong>
+                    {{ actividad.descripcion }}
+                </strong>
+
+                <span>
+                    {{ actividad.usuario.username }}
+                    · {{ actividad.modulo }}
+                </span>
+
+            </div>
+
+            <time>
+                {{ actividad.fecha|date:"d/m/Y H:i" }}
+            </time>
+
+        </div>
+
+    {% empty %}
+
+        <div class="activity-empty">
+            No hay actividades recientes para mostrar.
+        </div>
+
+    {% endfor %}
+
+</section>
+
+{% endif %}
+
+<section class="dashboard-footer">
+
+    <div class="footer-indicator"></div>
+
+    <p>
+        Kotoduo · Sistema de gestión y seguimiento de producción / Benjamín Toloza - Christian Cisterna
+    </p>
+
+    <span>Plataforma interna</span>
+
+</section>
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+<script src="{% static 'js/dashboard.js' %}"></script>
+
+{% endblock %}
+

@@ -1,0 +1,150 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}Kotoduo{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+
+<body>
+
+<div class="app-layout">
+
+    <!-- MENÚ LATERAL -->
+    <aside class="sidebar">
+
+        <div class="sidebar-brand">
+            <span class="brand-symbol">K</span>
+
+            <div>
+                <h1>KOTODUO</h1>
+                <small>Gestión de producción</small>
+            </div>
+        </div>
+
+        <div class="sidebar-section">GENERAL</div>
+
+        <nav class="sidebar-nav">
+
+            <a href="/dashboard/" class="nav-link active">
+                <span>▦</span>
+                Panel principal
+            </a>
+
+            <a href="#" class="nav-link">
+                <span>▤</span>
+                Órdenes de trabajo
+            </a>
+
+            <a href="#" class="nav-link">
+                <span>⚙</span>
+                Producción
+            </a>
+
+            <a href="#" class="nav-link">
+                <span>◫</span>
+                Inventario
+            </a>
+
+            <a href="#" class="nav-link">
+                <span>▣</span>
+                Plantillas
+            </a>
+
+            <a href="#" class="nav-link">
+                <span>▧</span>
+                Documentos
+            </a>
+
+        </nav>
+
+        <div class="sidebar-section">ADMINISTRACIÓN</div>
+
+        <nav class="sidebar-nav">
+
+            <a href="#" class="nav-link">
+                <span>♙</span>
+                Usuarios
+            </a>
+
+            <a href="#" class="nav-link">
+                <span>◷</span>
+                Auditoría
+            </a>
+
+        </nav>
+
+        <!-- USUARIO CONECTADO -->
+        <div class="sidebar-footer">
+
+            <div class="sidebar-user">
+
+                <div class="user-avatar">
+                    {{ request.user.username|first|upper|default:"U" }}
+                </div>
+
+                <div class="user-details">
+                    <strong>{{ request.user.username|default:"Usuario" }}</strong>
+                    <small>Kotoduo</small>
+                </div>
+
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-wrapper">
+
+        <!-- BARRA SUPERIOR -->
+        <header class="topbar">
+
+            <div class="topbar-title">
+                <h2>{% block page_title %}Panel principal{% endblock %}</h2>
+
+                <p>
+                    Sistema de gestión y seguimiento de producción
+                </p>
+            </div>
+
+            <div class="topbar-actions">
+
+                <span class="status-indicator"></span>
+
+                <span>Sistema operativo</span>
+
+                <div class="topbar-avatar">
+                    {{ request.user.username|first|upper|default:"U" }}
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- CONTENIDO DINÁMICO DE CADA PÁGINA -->
+        <main class="main-content">
+
+            {% block content %}
+            {% endblock %}
+
+        </main>
+
+    </div>
+
+</div>
+
+{% block extra_js %}
+{% endblock %}
+
+</body>
+</html>
+
