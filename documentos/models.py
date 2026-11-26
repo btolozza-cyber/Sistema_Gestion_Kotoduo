@@ -1,3 +1,4 @@
+
 from django.conf import settings
 from django.db import models
 
@@ -10,14 +11,12 @@ class Documento(models.Model):
         ESPECIFICACION = "especificacion", "Especificación"
         OTRO = "otro", "Otro"
 
-    orden_trabajo = models.ForeignKey(
-        "ordenes.OrdenTrabajo",
-        on_delete=models.PROTECT,
-        related_name="documentos"
+    nombre = models.CharField(max_length=150)
+
+    archivo = models.FileField(
+        upload_to="documentos/"
     )
 
-    nombre = models.CharField(max_length=150)
-    archivo = models.FileField(upload_to="documentos/ordenes/")
     tipo = models.CharField(
         max_length=30,
         choices=Tipo.choices,

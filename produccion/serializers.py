@@ -10,32 +10,19 @@ from .models import (
 
 
 class AreaProduccionSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = AreaProduccion
-        fields = [
-            "id",
-            "nombre",
-            "descripcion",
-            "activo",
-        ]
+        fields = ["id", "nombre", "descripcion", "activo"]
 
 
 class EtapaProduccionSerializer(serializers.ModelSerializer):
-
     orden_numero = serializers.CharField(
         source="orden_trabajo.numero",
-        read_only=True
+        read_only=True,
     )
-
     area_nombre = serializers.CharField(
         source="area.nombre",
-        read_only=True
-    )
-
-    responsable_nombre = serializers.CharField(
-        source="responsable.username",
-        read_only=True
+        read_only=True,
     )
 
     class Meta:
@@ -46,8 +33,6 @@ class EtapaProduccionSerializer(serializers.ModelSerializer):
             "orden_numero",
             "area",
             "area_nombre",
-            "responsable",
-            "responsable_nombre",
             "nombre",
             "descripcion",
             "secuencia",
@@ -55,24 +40,13 @@ class EtapaProduccionSerializer(serializers.ModelSerializer):
             "fecha_inicio",
             "fecha_fin",
         ]
-
-        read_only_fields = [
-            "id",
-            "fecha_inicio",
-            "fecha_fin",
-        ]
+        read_only_fields = fields
 
 
 class ActividadSerializer(serializers.ModelSerializer):
-
     etapa_nombre = serializers.CharField(
         source="etapa.nombre",
-        read_only=True
-    )
-
-    responsable_nombre = serializers.CharField(
-        source="responsable.username",
-        read_only=True
+        read_only=True,
     )
 
     class Meta:
@@ -81,27 +55,24 @@ class ActividadSerializer(serializers.ModelSerializer):
             "id",
             "etapa",
             "etapa_nombre",
-            "responsable",
-            "responsable_nombre",
             "nombre",
             "descripcion",
+            "secuencia",
             "estado",
             "fecha_inicio",
             "fecha_fin",
         ]
-
-        read_only_fields = [
-            "id",
-            "fecha_inicio",
-            "fecha_fin",
-        ]
+        read_only_fields = fields
 
 
 class HistorialEtapaSerializer(serializers.ModelSerializer):
-
     usuario_nombre = serializers.CharField(
         source="usuario.username",
-        read_only=True
+        read_only=True,
+    )
+    etapa_nombre = serializers.CharField(
+        source="etapa.nombre",
+        read_only=True,
     )
 
     class Meta:
@@ -109,6 +80,7 @@ class HistorialEtapaSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "etapa",
+            "etapa_nombre",
             "usuario",
             "usuario_nombre",
             "estado_anterior",
@@ -116,15 +88,17 @@ class HistorialEtapaSerializer(serializers.ModelSerializer):
             "observacion",
             "fecha",
         ]
-
         read_only_fields = fields
 
 
 class HistorialActividadSerializer(serializers.ModelSerializer):
-
     usuario_nombre = serializers.CharField(
         source="usuario.username",
-        read_only=True
+        read_only=True,
+    )
+    actividad_nombre = serializers.CharField(
+        source="actividad.nombre",
+        read_only=True,
     )
 
     class Meta:
@@ -132,6 +106,7 @@ class HistorialActividadSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "actividad",
+            "actividad_nombre",
             "usuario",
             "usuario_nombre",
             "estado_anterior",
@@ -139,5 +114,4 @@ class HistorialActividadSerializer(serializers.ModelSerializer):
             "observacion",
             "fecha",
         ]
-
         read_only_fields = fields

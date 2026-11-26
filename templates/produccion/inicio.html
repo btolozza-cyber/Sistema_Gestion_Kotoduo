@@ -1,0 +1,151 @@
+
+{% extends "base.html" %}
+
+{% block title %}Producción | Kotoduo{% endblock %}
+
+{% block content %}
+
+<div class="production-page">
+
+    <header class="module-header">
+        <div>
+            <span class="module-eyebrow">GESTIÓN OPERATIVA</span>
+            <h1>Producción</h1>
+            <p>Supervisa el avance de los procesos productivos y sus etapas.</p>
+        </div>
+
+        <a href="{% url 'produccion:etapas' %}" class="btn-primary">
+            Consultar etapas →
+        </a>
+    </header>
+
+    <section class="prod-dashboard">
+
+        <div class="prod-dashboard-heading">
+            <div>
+                <span class="module-eyebrow">INDICADORES GENERALES</span>
+                <h2>Estado de producción</h2>
+                <p>Situación actual de las etapas de todas las órdenes.</p>
+            </div>
+
+            <div class="prod-total-indicator">
+                <strong>{{ total_etapas }}</strong>
+                <span>Etapas registradas</span>
+            </div>
+        </div>
+
+        <div class="prod-stats-grid">
+
+            <article class="prod-stat-card">
+                <div class="prod-stat-top">
+                    <span class="prod-stat-label">Pendientes</span>
+                    <span class="prod-stat-icon pending">○</span>
+                </div>
+                <strong>{{ etapas_pendientes }}</strong>
+                <span class="prod-stat-description">A la espera de iniciar</span>
+            </article>
+
+            <article class="prod-stat-card">
+                <div class="prod-stat-top">
+                    <span class="prod-stat-label">En proceso</span>
+                    <span class="prod-stat-icon progress">◷</span>
+                </div>
+                <strong>{{ etapas_en_proceso }}</strong>
+                <span class="prod-stat-description">Actualmente en ejecución</span>
+            </article>
+
+            <article class="prod-stat-card">
+                <div class="prod-stat-top">
+                    <span class="prod-stat-label">Completadas</span>
+                    <span class="prod-stat-icon completed">✓</span>
+                </div>
+                <strong>{{ etapas_completadas }}</strong>
+                <span class="prod-stat-description">Etapas finalizadas</span>
+            </article>
+
+            <article class="prod-stat-card">
+                <div class="prod-stat-top">
+                    <span class="prod-stat-label">Bloqueadas</span>
+                    <span class="prod-stat-icon blocked">!</span>
+                </div>
+                <strong>{{ etapas_bloqueadas }}</strong>
+                <span class="prod-stat-description">Requieren atención</span>
+            </article>
+
+        </div>
+
+        <div class="prod-progress-section">
+
+            <div class="prod-progress-heading">
+                <strong>Progreso general</strong>
+                <span>{{ porcentaje_completado }}% completado</span>
+            </div>
+
+            <progress
+    class="prod-progress-bar"
+    value="{{ porcentaje_completado }}"
+    max="100"
+></progress>
+
+            <div class="prod-progress-legend">
+                <span>{{ etapas_completadas }} completadas</span>
+                <span>{{ etapas_en_proceso }} en proceso</span>
+                <span>{{ etapas_pendientes }} pendientes</span>
+                <span>{{ etapas_bloqueadas }} bloqueadas</span>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="prod-management-section">
+
+        <div class="prod-management-heading">
+            <div>
+                <span class="module-eyebrow">CONTROL OPERATIVO</span>
+                <h2>Seguimiento de producción</h2>
+                <p>Consulta las etapas y revisa el avance de cada orden de trabajo.</p>
+            </div>
+        </div>
+
+        <div class="prod-management-card">
+
+            <div class="prod-management-symbol">↗</div>
+
+            <div class="prod-management-content">
+                <h3>Etapas de producción</h3>
+
+                <p>
+                    Consulta las etapas de todas las órdenes, filtra por estado
+                    y accede a sus respectivos detalles.
+                </p>
+
+                <a href="{% url 'produccion:etapas' %}" class="prod-management-link">
+                    Acceder al seguimiento →
+                </a>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="prod-information">
+
+        <div class="prod-information-icon">i</div>
+
+        <div>
+            <strong>Gestión del proceso productivo</strong>
+
+            <p>
+                El avance se administra desde el detalle de cada orden de trabajo.
+                Los administradores pueden iniciar, completar, bloquear y reanudar
+                etapas respetando la secuencia establecida en la plantilla.
+                Los demás usuarios pueden consultar el progreso.
+            </p>
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

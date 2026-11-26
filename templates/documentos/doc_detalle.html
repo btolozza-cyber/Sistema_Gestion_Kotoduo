@@ -1,0 +1,91 @@
+
+{% extends "base.html" %}
+
+{% block title %}Detalle del documento | Kotoduo{% endblock %}
+{% block page_title %}Documentos{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN</span>
+        <h1>Detalle del documento</h1>
+        <p>Información y opciones del archivo seleccionado.</p>
+    </div>
+</div>
+
+<div class="orders-panel documents-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>{{ documento.nombre }}</h2>
+            <p>Información general del documento.</p>
+        </div>
+    </div>
+
+    <div class="inventory-form documents-detail">
+
+        <p>
+            <strong>Nombre:</strong>
+            {{ documento.nombre }}
+        </p>
+
+        <p>
+            <strong>Tipo:</strong>
+            {{ documento.get_tipo_display }}
+        </p>
+
+        <p>
+            <strong>Descripción:</strong>
+
+            {% if documento.descripcion %}
+                {{ documento.descripcion|linebreaksbr }}
+            {% else %}
+                <span class="text-muted">Sin descripción.</span>
+            {% endif %}
+        </p>
+
+        <p>
+            <strong>Subido por:</strong>
+            {{ documento.subido_por.username }}
+        </p>
+
+        <p>
+            <strong>Fecha de subida:</strong>
+            {{ documento.fecha_subida|date:"d/m/Y H:i" }}
+        </p>
+
+        <div class="form-actions">
+
+            <a href="{% url 'documentos:descargar' documento.pk %}"
+               class="btn-primary">
+                Descargar archivo
+            </a>
+
+            {% if puede_gestionar %}
+
+            <form method="POST"
+                  action="{% url 'documentos:eliminar' documento.pk %}"
+                  onsubmit="return confirm('¿Estás seguro de eliminar este documento?');">
+
+                {% csrf_token %}
+
+                <button type="submit" class="btn-clear">
+                    Eliminar documento
+                </button>
+
+            </form>
+
+            {% endif %}
+
+            <a href="{% url 'documentos:lista' %}" class="btn-filter">
+                Volver al listado
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

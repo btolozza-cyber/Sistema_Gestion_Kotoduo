@@ -4,18 +4,27 @@ from .models import Documento
 
 @admin.register(Documento)
 class DocumentoAdmin(admin.ModelAdmin):
+
     list_display = (
+        "id",
         "nombre",
-        "orden_trabajo",
         "tipo",
         "subido_por",
         "fecha_subida",
     )
 
-    list_filter = ("tipo", "fecha_subida")
-    search_fields = (
-        "nombre",
-        "orden_trabajo__numero",
+    list_filter = (
+        "tipo",
+        "fecha_subida",
     )
 
-    readonly_fields = ("fecha_subida",)
+    search_fields = (
+        "nombre",
+        "descripcion",
+        "subido_por__username",
+    )
+
+    readonly_fields = (
+        "subido_por",
+        "fecha_subida",
+    )

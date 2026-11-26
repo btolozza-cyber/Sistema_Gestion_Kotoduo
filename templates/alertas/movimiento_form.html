@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Gestionar stock | Kotoduo{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN</span>
+
+        <h1>Gestionar stock</h1>
+
+        <p>
+            Registra entradas o salidas de insumos y actualiza las existencias del inventario.
+        </p>
+    </div>
+</div>
+
+<div class="orders-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Registrar movimiento</h2>
+            <p>Selecciona el insumo y especifica el tipo y la cantidad del movimiento.</p>
+        </div>
+    </div>
+
+    <form method="POST" class="inventory-form">
+
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="form-errors">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        {{ form.as_p }}
+
+        <div class="form-actions">
+
+            <button type="submit" class="btn-primary">
+                Registrar movimiento
+            </button>
+
+            <a href="{% url 'alertas:inventario' %}" class="btn-clear">
+                Cancelar
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

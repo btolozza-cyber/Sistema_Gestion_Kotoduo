@@ -1,0 +1,91 @@
+
+{% extends "base.html" %}
+
+{% block title %}Detalle de auditoría | Kotoduo{% endblock %}
+{% block page_title %}Auditoría{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">ADMINISTRACIÓN</span>
+        <h1>Detalle del registro</h1>
+        <p>Información completa del evento registrado en el sistema.</p>
+    </div>
+</div>
+
+<div class="orders-panel audit-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Registro #{{ registro.id }}</h2>
+            <p>Detalle de la actividad realizada.</p>
+        </div>
+
+        <span class="priority-badge priority-media">
+            {{ registro.get_accion_display }}
+        </span>
+    </div>
+
+    <div class="audit-detail">
+
+        <div class="audit-detail-item">
+            <span>Usuario responsable</span>
+            <strong>{{ registro.usuario.username }}</strong>
+        </div>
+
+        <div class="audit-detail-item">
+            <span>Módulo</span>
+            <strong>{{ registro.get_modulo_display }}</strong>
+        </div>
+
+        <div class="audit-detail-item">
+            <span>Tipo de acción</span>
+            <strong>{{ registro.get_accion_display }}</strong>
+        </div>
+
+        <div class="audit-detail-item">
+            <span>Identificador del objeto</span>
+            <strong>
+                {% if registro.objeto_id %}
+                    {{ registro.objeto_id }}
+                {% else %}
+                    No especificado
+                {% endif %}
+            </strong>
+        </div>
+
+        <div class="audit-detail-item">
+            <span>Referencia del objeto</span>
+            <strong>
+                {% if registro.objeto_referencia %}
+                    {{ registro.objeto_referencia }}
+                {% else %}
+                    No especificada
+                {% endif %}
+            </strong>
+        </div>
+
+        <div class="audit-detail-item">
+            <span>Fecha y hora</span>
+            <strong>{{ registro.fecha|date:"d/m/Y H:i:s" }}</strong>
+        </div>
+
+        <div class="audit-detail-description">
+            <span>Descripción del evento</span>
+            <p>{{ registro.descripcion }}</p>
+        </div>
+
+    </div>
+
+    <div class="form-actions audit-detail-actions">
+
+        <a href="{% url 'auditoria:lista' %}" class="btn-filter">
+            Volver al listado
+        </a>
+
+    </div>
+
+</div>
+
+{% endblock %}

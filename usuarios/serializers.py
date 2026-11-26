@@ -7,6 +7,7 @@ ROLES_PERMITIDOS = [
     "Operario",
 ]
 
+
 class UsuarioSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(
@@ -42,7 +43,12 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         rol_nombre = validated_data.pop("rol")
-        password = validated_data.pop("password")
+        password = validated_data.pop("password", None)
+
+        if not password:
+            raise serializers.ValidationError({
+                "password": "La contraseña es obligatoria."
+            })
 
         usuario = User(**validated_data)
         usuario.set_password(password)

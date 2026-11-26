@@ -1,0 +1,56 @@
+
+{% extends "base.html" %}
+
+{% block title %}Subir documento | Kotoduo{% endblock %}
+{% block page_title %}Documentos{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN</span>
+        <h1>Subir documento</h1>
+        <p>Incorpora nuevos archivos a la biblioteca documental.</p>
+    </div>
+</div>
+
+<div class="orders-panel documents-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Información del documento</h2>
+            <p>Completa los datos y selecciona el archivo que deseas subir.</p>
+        </div>
+    </div>
+
+    <form method="POST"
+          enctype="multipart/form-data"
+          class="inventory-form documents-form">
+
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="form-errors">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        {{ form.as_p }}
+
+        <div class="form-actions">
+
+            <button type="submit" class="btn-primary">
+                Subir documento
+            </button>
+
+            <a href="{% url 'documentos:lista' %}" class="btn-clear">
+                Cancelar
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

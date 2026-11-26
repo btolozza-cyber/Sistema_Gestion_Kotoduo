@@ -1,65 +1,60 @@
 
 {% extends "base.html" %}
-{% load static %}
 
 {% block title %}Órdenes de trabajo | Kotoduo{% endblock %}
-{% block page_title %}Órdenes de trabajo{% endblock %}
 
 {% block content %}
 
-<!-- ENCABEZADO -->
-<section class="module-header">
+<div class="module-header">
     <div>
-        <span class="module-eyebrow">GESTIÓN OPERATIVA</span>
+        <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN</span>
         <h1>Órdenes de trabajo</h1>
-        <p>Administra y consulta los trabajos registrados en Kotoduo.</p>
+        <p>Administra y consulta las órdenes de trabajo registradas en el sistema.</p>
     </div>
 
-    {% if request.user.is_superuser or request.user.groups.all %}
-        <a href="#" class="btn-primary">
+    {% if puede_crear %}
+        <a href="{% url 'ordenes:crear' %}" class="btn-primary">
             + Nueva orden
         </a>
     {% endif %}
-</section>
-
+</div>
 
 <!-- RESUMEN -->
-<section class="orders-summary">
+<div class="orders-summary">
 
     <div class="orders-summary-card">
-        <span>Total de órdenes</span>
-        <strong>{{ total_ordenes }}</strong>
+        <span class="summary-label">Órdenes registradas</span>
+        <strong class="summary-value">{{ total_ordenes }}</strong>
+        <span class="summary-description">Total de órdenes disponibles</span>
     </div>
 
     <div class="orders-summary-card">
-        <span>Resultados por página</span>
-        <strong>{{ ordenes|length }}</strong>
+        <span class="summary-label">Resultados actuales</span>
+        <strong class="summary-value">{{ ordenes.paginator.count }}</strong>
+        <span class="summary-description">Órdenes según los filtros aplicados</span>
     </div>
 
-</section>
-
+</div>
 
 <!-- LISTADO -->
-<section class="orders-panel">
+<div class="orders-panel">
 
-    <div class="orders-panel-heading">
+    <div class="orders-panel-header">
         <div>
             <h2>Listado de órdenes</h2>
-            <p>Consulta, busca y filtra las órdenes de trabajo.</p>
+            <p>Consulta los trabajos y su estado actual.</p>
         </div>
     </div>
 
-
-    <!-- BUSCADOR Y FILTROS -->
+    <!-- FILTROS -->
     <form method="GET" class="orders-filters">
 
         <div class="orders-search">
-            <span>⌕</span>
             <input
                 type="text"
                 name="q"
+                placeholder="Buscar por número, trabajo o cliente..."
                 value="{{ busqueda }}"
-                placeholder="Buscar por número, nombre o cliente..."
             >
         </div>
 
@@ -99,7 +94,6 @@
 
     </form>
 
-
     <!-- TABLA -->
     <div class="orders-table-container">
 
@@ -107,13 +101,14 @@
 
             <thead>
                 <tr>
-                    <th>N.º ORDEN</th>
-                    <th>TRABAJO</th>
-                    <th>CLIENTE</th>
-                    <th>TIPO</th>
-                    <th>PRIORIDAD</th>
-                    <th>ESTADO</th>
-                    <th>FECHA DE ENTREGA</th>
+                    <th>Número</th>
+                    <th>Trabajo</th>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    <th>Prioridad</th>
+                    <th>Estado</th>
+                    <th>Fecha de entrega</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
 
@@ -122,11 +117,13 @@
                 {% for orden in ordenes %}
 
                     <tr>
-
                         <td>
-                            <strong class="order-number">
+                            <a
+                                href="{% url 'ordenes:detalle' orden.pk %}"
+                                class="order-number"
+                            >
                                 {{ orden.numero }}
-                            </strong>
+                            </a>
                         </td>
 
                         <td>
@@ -135,12 +132,14 @@
                             </span>
                         </td>
 
-                        <td>
-                            {{ orden.cliente }}
-                        </td>
+                        <td>{{ orden.cliente }}</td>
 
                         <td>
-                            {{ orden.tipo.nombre }}
+                            {% if orden.tipo %}
+                                {{ orden.tipo.nombre }}
+                            {% else %}
+                                —
+                            {% endif %}
                         </td>
 
                         <td>
@@ -163,17 +162,32 @@
                             {% endif %}
                         </td>
 
+                        <td>
+                            {% if puede_cancelar and orden.estado == "pendiente" %}
+                                <form
+                                    method="POST"
+                                    action="{% url 'ordenes:cancelar' orden.pk %}"
+                                    onsubmit="return confirm('¿Estás seguro de que deseas cancelar esta orden?');"
+                                >
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-cancel-order">
+                                        Cancelar
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
                     </tr>
 
                 {% empty %}
 
                     <tr>
-                        <td colspan="7" class="orders-empty">
-                            <div class="empty-icon">▤</div>
-                            <strong>No se encontraron órdenes</strong>
-                            <p>
-                                No existen órdenes que coincidan con los filtros seleccionados.
-                            </p>
+                        <td colspan="8" class="empty-table">
+                            <div class="empty-state">
+                                <strong>No se encontraron órdenes</strong>
+                                <p>No existen órdenes que coincidan con los criterios de búsqueda.</p>
+                            </div>
                         </td>
                     </tr>
 
@@ -185,17 +199,16 @@
 
     </div>
 
-
     <!-- PAGINACIÓN -->
     {% if ordenes.has_other_pages %}
 
         <div class="orders-pagination">
 
-            <span>
+            <span class="pagination-info">
                 Página {{ ordenes.number }} de {{ ordenes.paginator.num_pages }}
             </span>
 
-            <div class="pagination-actions">
+            <div class="pagination-controls">
 
                 {% if ordenes.has_previous %}
                     <a href="?q={{ busqueda|urlencode }}&estado={{ estado_seleccionado|urlencode }}&prioridad={{ prioridad_seleccionada|urlencode }}&page={{ ordenes.previous_page_number }}">
@@ -215,14 +228,6 @@
 
     {% endif %}
 
-</section>
-
-
-<!-- PIE -->
-<section class="dashboard-footer">
-    <div class="footer-indicator"></div>
-    <p>Kotoduo · Gestión de órdenes de trabajo</p>
-    <span>Plataforma interna</span>
-</section>
+</div>
 
 {% endblock %}

@@ -1,5 +1,12 @@
 from django.db import transaction
 from django.utils import timezone
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q, F
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
+
 
 from rest_framework import status, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -13,6 +20,7 @@ from .serializers import (
     MovimientoInsumoSerializer,
 )
 
+from .forms import InsumoForm, MovimientoInsumoForm
 from auditoria.services import registrar_evento
 
 
@@ -433,3 +441,420 @@ class AlertaInsumoViewSet(viewsets.ModelViewSet):
             "Las alertas no se eliminan para preservar su trazabilidad."
         )
 
+
+# ========================================
+# INTERFAZ WEB - INVENTARIO
+# ========================================
+
+@login_required
+def inventario_inicio(request):
+    insumos = Insumo.objects.filter(
+        activo=True
+    ).order_by("nombre")
+
+    stock_bajo = insumos.filter(
+        stock_actual__lte=F("stock_minimo")
+    )
+
+    alertas_activas = AlertaInsumo.objects.filter(
+        estado__in=[
+            AlertaInsumo.Estado.PENDIENTE,
+            AlertaInsumo.Estado.EN_GESTION,
+        ]
+    ).select_related(
+        "insumo",
+        "orden_trabajo",
+        "registrado_por"
+    )
+
+    contexto = {
+        "insumos": insumos,
+        "total_insumos": insumos.count(),
+        "total_stock_bajo": stock_bajo.count(),
+        "total_movimientos": MovimientoInsumo.objects.count(),
+        "insumos_stock_bajo": stock_bajo[:5],
+        "alertas_activas": alertas_activas,
+        "total_alertas": alertas_activas.count(),
+        "puede_gestionar": puede_gestionar(request.user),
+    }
+
+    return render(
+        request,
+        "alertas/inventario_inicio.html",
+        contexto
+    )
+
+
+@login_required
+def insumos_lista(request):
+    return redirect("alertas:inventario")
+
+    if puede_gestionar(usuario):
+        queryset = Insumo.objects.all()
+    else:
+        queryset = Insumo.objects.filter(activo=True)
+
+    busqueda = request.GET.get("q", "").strip()
+    filtro_stock = request.GET.get("stock", "")
+
+    if busqueda:
+        queryset = queryset.filter(
+            Q(nombre__icontains=busqueda)
+            | Q(descripcion__icontains=busqueda)
+        )
+
+    if filtro_stock == "bajo":
+        queryset = queryset.filter(
+            stock_actual__lte=F("stock_minimo")
+        )
+
+    paginator = Paginator(queryset, 10)
+    pagina = paginator.get_page(request.GET.get("page"))
+
+    contexto = {
+        "insumos": pagina,
+        "busqueda": busqueda,
+        "filtro_stock": filtro_stock,
+        "total_insumos": Insumo.objects.filter(activo=True).count(),
+        "puede_gestionar": puede_gestionar(usuario),
+    }
+
+    return render(
+        request,
+        "alertas/insumos_lista.html",
+        contexto
+    )
+
+
+@login_required
+def insumo_detalle(request, pk):
+    insumo = get_object_or_404(Insumo, pk=pk)
+
+    movimientos = MovimientoInsumo.objects.filter(
+        insumo=insumo
+    ).select_related(
+        "registrado_por",
+        "orden_trabajo"
+    ).order_by("-fecha")
+
+    return render(
+        request,
+        "alertas/insumo_detalle.html",
+        {
+            "insumo": insumo,
+            "movimientos": movimientos,
+            "puede_gestionar": puede_gestionar(request.user),
+        }
+    )
+
+
+
+@login_required
+def insumo_crear(request):
+    if not puede_gestionar(request.user):
+        messages.error(request, "No tienes permiso para registrar insumos.")
+        return redirect("alertas:insumos")
+
+    if request.method == "POST":
+        form = InsumoForm(request.POST)
+
+        if form.is_valid():
+            insumo = form.save()
+            verificar_stock_bajo(insumo, request.user)
+
+            registrar_evento(
+                usuario=request.user,
+                modulo="alertas",
+                accion="creacion",
+                descripcion=f"Registró el insumo '{insumo.nombre}'.",
+                objeto_id=insumo.id,
+                objeto_referencia=insumo.nombre
+            )
+
+            messages.success(request, "Insumo registrado correctamente.")
+            return redirect("alertas:insumos")
+
+    else:
+        form = InsumoForm()
+
+    return render(
+        request,
+        "alertas/insumo_form.html",
+        {
+            "form": form,
+            "titulo": "Registrar insumo",
+        }
+    )
+
+
+@login_required
+def insumo_editar(request, pk):
+    if not puede_gestionar(request.user):
+        messages.error(request, "No tienes permiso para modificar insumos.")
+        return redirect("alertas:insumos")
+
+    insumo = get_object_or_404(Insumo, pk=pk)
+
+    if request.method == "POST":
+        form = InsumoForm(request.POST, instance=insumo)
+
+        if form.is_valid():
+            insumo = form.save()
+            verificar_stock_bajo(insumo, request.user)
+
+            registrar_evento(
+                usuario=request.user,
+                modulo="alertas",
+                accion="modificacion",
+                descripcion=f"Modificó el insumo '{insumo.nombre}'.",
+                objeto_id=insumo.id,
+                objeto_referencia=insumo.nombre
+            )
+
+            messages.success(request, "Insumo actualizado correctamente.")
+            return redirect("alertas:insumos")
+
+    else:
+        form = InsumoForm(instance=insumo)
+
+    return render(
+        request,
+        "alertas/insumo_form.html",
+        {
+            "form": form,
+            "titulo": "Editar insumo",
+            "insumo": insumo,
+        }
+    )
+
+
+# ========================================
+# MOVIMIENTOS DE INVENTARIO
+# ========================================
+
+@login_required
+def movimientos_lista(request):
+    if not puede_gestionar(request.user):
+        messages.error(
+            request,
+            "No tienes permiso para consultar los movimientos."
+        )
+        return redirect("alertas:inventario")
+
+    queryset = MovimientoInsumo.objects.select_related(
+        "insumo",
+        "orden_trabajo",
+        "registrado_por"
+    )
+
+    busqueda = request.GET.get("q", "").strip()
+
+    if busqueda:
+        queryset = queryset.filter(
+            Q(insumo__nombre__icontains=busqueda)
+            | Q(orden_trabajo__numero__icontains=busqueda)
+            | Q(registrado_por__username__icontains=busqueda)
+        )
+
+    paginator = Paginator(queryset, 15)
+    pagina = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "alertas/movimientos_lista.html",
+        {
+            "movimientos": pagina,
+            "busqueda": busqueda,
+        }
+    )
+
+
+
+@login_required
+def movimiento_crear(request):
+    if not puede_gestionar(request.user):
+        messages.error(
+            request,
+            "No tienes permiso para registrar movimientos."
+        )
+        return redirect("alertas:inventario")
+
+    if request.method == "POST":
+        form = MovimientoInsumoForm(request.POST)
+
+        if form.is_valid():
+            datos = form.cleaned_data
+
+            with transaction.atomic():
+                try:
+                    insumo = Insumo.objects.select_for_update().get(
+                        pk=datos["insumo"].pk,
+                        activo=True
+                    )
+                except Insumo.DoesNotExist:
+                    form.add_error(
+                        "insumo",
+                        "El insumo no existe o está inactivo."
+                    )
+                    return render(
+                        request,
+                        "alertas/movimiento_form.html",
+                        {"form": form}
+                    )
+
+                cantidad = datos["cantidad"]
+                tipo = datos["tipo"]
+                stock_anterior = insumo.stock_actual
+
+                if (
+                    tipo == MovimientoInsumo.Tipo.SALIDA
+                    and cantidad > stock_anterior
+                ):
+                    form.add_error(
+                        "cantidad",
+                        f"Stock insuficiente. Disponible: "
+                        f"{stock_anterior} {insumo.unidad_medida}."
+                    )
+
+                    return render(
+                        request,
+                        "alertas/movimiento_form.html",
+                        {"form": form}
+                    )
+
+                if tipo == MovimientoInsumo.Tipo.ENTRADA:
+                    insumo.stock_actual += cantidad
+                else:
+                    insumo.stock_actual -= cantidad
+
+                insumo.save(update_fields=["stock_actual"])
+
+                movimiento = form.save(commit=False)
+                movimiento.insumo = insumo
+                movimiento.registrado_por = request.user
+                movimiento.save()
+
+                verificar_stock_bajo(insumo, request.user)
+
+                accion_texto = (
+                    "entrada"
+                    if tipo == MovimientoInsumo.Tipo.ENTRADA
+                    else "salida"
+                )
+
+                referencia = (
+                    movimiento.orden_trabajo.numero
+                    if movimiento.orden_trabajo
+                    else insumo.nombre
+                )
+
+                registrar_evento(
+                    usuario=request.user,
+                    modulo="alertas",
+                    accion="creacion",
+                    descripcion=(
+                        f"Registró una {accion_texto} de {cantidad} "
+                        f"{insumo.unidad_medida} del insumo "
+                        f"'{insumo.nombre}'. "
+                        f"Stock anterior: {stock_anterior}. "
+                        f"Stock actual: {insumo.stock_actual}."
+                    ),
+                    objeto_id=movimiento.id,
+                    objeto_referencia=referencia
+                )
+
+            messages.success(
+                request,
+                "Movimiento registrado y stock actualizado correctamente."
+            )
+
+            return redirect(
+                "alertas:insumo-detalle",
+                pk=insumo.pk
+            )
+
+    else:
+        initial = {}
+        insumo_id = request.GET.get("insumo")
+
+        if insumo_id:
+            insumo = Insumo.objects.filter(
+                pk=insumo_id,
+                activo=True
+            ).first()
+
+            if insumo:
+                initial["insumo"] = insumo
+
+        form = MovimientoInsumoForm(initial=initial)
+
+    return render(
+        request,
+        "alertas/movimiento_form.html",
+        {"form": form}
+    )
+
+# ========================================
+# GESTIÓN DE ALERTAS DESDE INVENTARIO
+# ========================================
+
+@login_required
+@require_POST
+def alerta_actualizar_estado(request, pk):
+    if not puede_gestionar(request.user):
+        messages.error(
+            request,
+            "No tienes permiso para gestionar alertas."
+        )
+        return redirect("alertas:inventario")
+
+    nuevo_estado = request.POST.get("estado")
+
+    with transaction.atomic():
+        alerta = get_object_or_404(
+            AlertaInsumo.objects.select_for_update(),
+            pk=pk
+        )
+
+        transiciones_permitidas = {
+            AlertaInsumo.Estado.PENDIENTE: AlertaInsumo.Estado.EN_GESTION,
+            AlertaInsumo.Estado.EN_GESTION: AlertaInsumo.Estado.RESUELTA,
+        }
+
+        estado_esperado = transiciones_permitidas.get(alerta.estado)
+
+        if nuevo_estado != estado_esperado:
+            messages.error(
+                request,
+                "La transición solicitada no está permitida. "
+                "Las alertas deben pasar de Pendiente a En gestión "
+                "y luego a Resuelta."
+            )
+            return redirect("alertas:inventario")
+
+        estado_anterior = alerta.estado
+        alerta.estado = nuevo_estado
+
+        if nuevo_estado == AlertaInsumo.Estado.RESUELTA:
+            alerta.fecha_resolucion = timezone.now()
+
+        alerta.save(update_fields=["estado", "fecha_resolucion"])
+
+        registrar_evento(
+            usuario=request.user,
+            modulo="alertas",
+            accion="cambio_estado",
+            descripcion=(
+                f"Cambió la alerta #{alerta.id} del insumo "
+                f"'{alerta.insumo.nombre}' de "
+                f"'{estado_anterior}' a '{nuevo_estado}'."
+            ),
+            objeto_id=alerta.id,
+            objeto_referencia=alerta.insumo.nombre
+        )
+
+    messages.success(
+        request,
+        "Estado de alerta actualizado correctamente."
+    )
+    return redirect("alertas:inventario")

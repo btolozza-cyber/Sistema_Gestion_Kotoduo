@@ -1,0 +1,227 @@
+
+{% extends "base.html" %}
+
+{% block title %}Nueva orden | Kotoduo{% endblock %}
+{% block page_title %}Nueva orden{% endblock %}
+
+{% block content %}
+
+<section class="module-header">
+    <div>
+        <span class="module-eyebrow">GESTIÓN OPERATIVA</span>
+        <h1>Registrar nueva orden</h1>
+        <p>Ingresa la información necesaria para registrar un nuevo trabajo.</p>
+    </div>
+
+    <a href="{% url 'ordenes:lista' %}" class="btn-clear">
+        ← Volver a órdenes
+    </a>
+</section>
+
+<section class="order-form-panel">
+
+    <div class="order-form-heading">
+        <div>
+            <h2>Información de la orden</h2>
+            <p>Completa los campos para registrar el trabajo.</p>
+        </div>
+
+        <span class="panel-symbol">▤</span>
+    </div>
+
+    {% if formulario.errors %}
+        <div class="form-error-message">
+            Revisa los campos marcados. Hay información que necesita corregirse.
+        </div>
+    {% endif %}
+
+    <form method="POST" class="order-form">
+        {% csrf_token %}
+
+        <div class="form-grid">
+
+            <div class="form-field">
+                <label>Nombre del trabajo <span>*</span></label>
+                {{ formulario.nombre }}
+
+                {% for error in formulario.nombre.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-field">
+                <label>Cliente <span>*</span></label>
+                {{ formulario.cliente }}
+
+                {% for error in formulario.cliente.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-field">
+                <label>Tipo de orden <span>*</span></label>
+                {{ formulario.tipo }}
+
+                {% for error in formulario.tipo.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-field">
+                <label>Prioridad <span>*</span></label>
+                {{ formulario.prioridad }}
+
+                {% for error in formulario.prioridad.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-field">
+                <label>Plantilla de producción</label>
+
+                <select name="plantilla" id="id_plantilla">
+                    <option value="">Seleccionar plantilla</option>
+
+                    {% for plantilla in formulario.fields.plantilla.queryset %}
+                        <option
+                            value="{{ plantilla.pk }}"
+                            data-tipo-id="{{ plantilla.tipo_orden_id }}"
+                            {% if formulario.plantilla.value|stringformat:"s" == plantilla.pk|stringformat:"s" %}selected{% endif %}
+                        >
+                            {{ plantilla.nombre }} ({{ plantilla.tipo_orden.nombre }})
+                        </option>
+                    {% endfor %}
+                </select>
+
+                {% if formulario.plantilla.help_text %}
+                    <small>{{ formulario.plantilla.help_text }}</small>
+                {% endif %}
+
+                {% for error in formulario.plantilla.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+
+                <small id="plantilla-mensaje">
+                    Selecciona primero el tipo de orden para ver sus plantillas.
+                </small>
+            </div>
+
+            <div class="form-field">
+                <label>Fecha de entrega</label>
+                {{ formulario.fecha_entrega }}
+
+                {% for error in formulario.fecha_entrega.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-field form-field-full">
+                <label>Descripción del trabajo</label>
+                {{ formulario.descripcion }}
+
+                {% for error in formulario.descripcion.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+        </div>
+
+        <div class="form-information">
+            <div class="form-information-icon">i</div>
+
+            <div>
+                <strong>Información automática</strong>
+                <p>
+                    El número de orden se generará automáticamente.
+                    El estado inicial será Pendiente y se registrará
+                    el usuario que crea la orden.
+                    Las etapas y actividades se generarán al iniciar
+                    la producción.
+                </p>
+            </div>
+        </div>
+
+        <div class="order-form-actions">
+            <a href="{% url 'ordenes:lista' %}" class="btn-cancel">
+                Cancelar
+            </a>
+
+            <button type="submit" class="btn-primary">
+                Registrar orden
+            </button>
+        </div>
+
+    </form>
+
+</section>
+
+<section class="dashboard-footer">
+    <div class="footer-indicator"></div>
+    <p>Kotoduo · Gestión de órdenes de trabajo</p>
+    <span>Plataforma interna</span>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const tipoSelect = document.getElementById("id_tipo");
+    const plantillaSelect = document.getElementById("id_plantilla");
+    const mensaje = document.getElementById("plantilla-mensaje");
+
+    function filtrarPlantillas() {
+
+        const tipoSeleccionado = tipoSelect.value;
+        let plantillasDisponibles = 0;
+        let seleccionActualValida = false;
+
+        Array.from(plantillaSelect.options).forEach(function (opcion) {
+
+            if (!opcion.value) {
+                opcion.hidden = false;
+                return;
+            }
+
+            const coincide = opcion.dataset.tipoId === tipoSeleccionado;
+
+            opcion.hidden = !coincide;
+
+            if (coincide) {
+                plantillasDisponibles++;
+
+                if (opcion.selected) {
+                    seleccionActualValida = true;
+                }
+            }
+        });
+
+        if (!seleccionActualValida) {
+            plantillaSelect.value = "";
+        }
+
+        if (!tipoSeleccionado) {
+            plantillaSelect.disabled = true;
+            mensaje.textContent = "Selecciona primero el tipo de orden.";
+        } else {
+            plantillaSelect.disabled = false;
+
+            if (plantillasDisponibles > 0) {
+                mensaje.textContent =
+                    plantillasDisponibles === 1
+                    ? "Hay una plantilla disponible para este tipo de orden."
+                    : "Hay " + plantillasDisponibles +
+                      " plantillas disponibles para este tipo de orden.";
+            } else {
+                mensaje.textContent =
+                    "No existen plantillas activas para este tipo de orden.";
+            }
+        }
+    }
+
+    tipoSelect.addEventListener("change", filtrarPlantillas);
+
+    filtrarPlantillas();
+
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,174 @@
+
+{% extends "base.html" %}
+
+{% block title %}Movimientos de inventario | Kotoduo{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">GESTIÓN DE INVENTARIO</span>
+        <h1>Movimientos de inventario</h1>
+        <p>Consulta el historial de entradas y salidas de materiales.</p>
+    </div>
+
+    <a href="{% url 'alertas:movimiento-crear' %}" class="btn-primary">
+        + Registrar movimiento
+    </a>
+</div>
+
+<!-- RESUMEN -->
+<div class="orders-summary">
+
+    <div class="orders-summary-card">
+        <span class="summary-label">Movimientos registrados</span>
+        <strong class="summary-value">{{ movimientos.paginator.count }}</strong>
+        <span class="summary-description">Operaciones de inventario</span>
+    </div>
+
+</div>
+
+<!-- HISTORIAL -->
+<div class="orders-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Historial de movimientos</h2>
+            <p>Registro de las operaciones realizadas sobre el inventario.</p>
+        </div>
+    </div>
+
+    <!-- BUSCADOR -->
+    <form method="GET" class="orders-filters">
+
+        <div class="orders-search">
+            <input
+                type="text"
+                name="q"
+                placeholder="Buscar por insumo, orden o responsable..."
+                value="{{ busqueda }}"
+            >
+        </div>
+
+        <button type="submit" class="btn-filter">
+            Buscar
+        </button>
+
+        <a href="{% url 'alertas:movimientos' %}" class="btn-clear">
+            Limpiar
+        </a>
+
+    </form>
+
+    <!-- TABLA -->
+    <div class="orders-table-container">
+
+        <table class="orders-table">
+
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Insumo</th>
+                    <th>Tipo</th>
+                    <th>Cantidad</th>
+                    <th>Orden asociada</th>
+                    <th>Responsable</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for movimiento in movimientos %}
+
+                    <tr>
+                        <td>
+                            {{ movimiento.fecha|date:"d/m/Y H:i" }}
+                        </td>
+
+                        <td>
+                            <span class="order-name">
+                                {{ movimiento.insumo.nombre }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {% if movimiento.tipo == "entrada" %}
+                                <span class="order-status status-completada">
+                                    Entrada
+                                </span>
+                            {% else %}
+                                <span class="order-status status-bloqueada">
+                                    Salida
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ movimiento.cantidad }}
+                            {{ movimiento.insumo.unidad_medida }}
+                        </td>
+
+                        <td>
+                            {% if movimiento.orden_trabajo %}
+                                {{ movimiento.orden_trabajo.numero }}
+                            {% else %}
+                                <span class="text-muted">Sin asociación</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ movimiento.registrado_por.username }}
+                        </td>
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+                        <td colspan="6" class="empty-table">
+                            <div class="empty-state">
+                                <strong>No hay movimientos registrados</strong>
+                                <p>Los movimientos de inventario aparecerán aquí.</p>
+                            </div>
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- PAGINACIÓN -->
+    {% if movimientos.has_other_pages %}
+
+        <div class="orders-pagination">
+
+            <span class="pagination-info">
+                Página {{ movimientos.number }} de {{ movimientos.paginator.num_pages }}
+            </span>
+
+            <div class="pagination-controls">
+
+                {% if movimientos.has_previous %}
+                    <a href="?q={{ busqueda|urlencode }}&page={{ movimientos.previous_page_number }}">
+                        Anterior
+                    </a>
+                {% endif %}
+
+                {% if movimientos.has_next %}
+                    <a href="?q={{ busqueda|urlencode }}&page={{ movimientos.next_page_number }}">
+                        Siguiente
+                    </a>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

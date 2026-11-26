@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de usuario | Kotoduo{% endblock %}
+{% block page_title %}Detalle de usuario{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">ADMINISTRACIÓN</span>
+        <h2>{{ usuario_objetivo.username }}</h2>
+        <p>Información de la cuenta y permisos asignados.</p>
+    </div>
+
+    <a href="{% url 'usuarios:lista' %}" class="btn-clear">
+        Volver
+    </a>
+</div>
+
+<div class="users-detail-panel">
+
+    <div class="users-detail-header">
+        <div>
+            <h3>{{ usuario_objetivo.first_name }} {{ usuario_objetivo.last_name }}</h3>
+            <span>{{ usuario_objetivo.username }}</span>
+        </div>
+
+        {% if usuario_objetivo.is_active %}
+            <span class="users-status users-status-active">Activo</span>
+        {% else %}
+            <span class="users-status users-status-inactive">Inactivo</span>
+        {% endif %}
+    </div>
+
+    <div class="users-detail-grid">
+
+        <div class="users-detail-item">
+            <span>Nombre de usuario</span>
+            <strong>{{ usuario_objetivo.username }}</strong>
+        </div>
+
+        <div class="users-detail-item">
+            <span>Nombre</span>
+            <strong>{{ usuario_objetivo.first_name|default:"No registrado" }}</strong>
+        </div>
+
+        <div class="users-detail-item">
+            <span>Apellido</span>
+            <strong>{{ usuario_objetivo.last_name|default:"No registrado" }}</strong>
+        </div>
+
+        <div class="users-detail-item">
+            <span>Correo electrónico</span>
+            <strong>{{ usuario_objetivo.email|default:"No registrado" }}</strong>
+        </div>
+
+        <div class="users-detail-item">
+            <span>Rol asignado</span>
+            <strong>{{ rol }}</strong>
+        </div>
+
+        <div class="users-detail-item">
+            <span>Fecha de registro</span>
+            <strong>{{ usuario_objetivo.date_joined|date:"d/m/Y H:i" }}</strong>
+        </div>
+
+        <div class="users-detail-item">
+            <span>Último acceso</span>
+            <strong>
+                {% if usuario_objetivo.last_login %}
+                    {{ usuario_objetivo.last_login|date:"d/m/Y H:i" }}
+                {% else %}
+                    Sin registros
+                {% endif %}
+            </strong>
+        </div>
+
+    </div>
+
+    <div class="users-detail-actions">
+
+        <a
+            href="{% url 'usuarios:editar' usuario_objetivo.pk %}"
+            class="btn-primary"
+        >
+            Editar usuario
+        </a>
+
+        {% if usuario_objetivo.pk != request.user.pk %}
+            <form
+                method="POST"
+                action="{% url 'usuarios:cambiar_estado' usuario_objetivo.pk %}"
+                onsubmit="return confirm('¿Estás seguro de cambiar el estado de este usuario?');"
+            >
+                {% csrf_token %}
+
+                {% if usuario_objetivo.is_active %}
+                    <button type="submit" class="users-btn-danger">
+                        Desactivar usuario
+                    </button>
+                {% else %}
+                    <button type="submit" class="users-btn-reactivate">
+                        Reactivar usuario
+                    </button>
+                {% endif %}
+            </form>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

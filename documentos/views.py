@@ -1,6 +1,15 @@
+import os
 
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Q
+from django.http import FileResponse
+from django.shortcuts import (
+    get_object_or_404,
+    redirect,
+    render
+)
+from django.views.decorators.http import require_POST
 
 from rest_framework import viewsets
 from rest_framework.permissions import (
@@ -15,10 +24,13 @@ from rest_framework.parsers import (
 )
 
 from .models import Documento
+from .forms import DocumentoForm
 from .serializers import DocumentoSerializer
 
 from auditoria.services import registrar_evento
 
+
+# PERMISOS
 
 def es_gestor_documentos(user):
     return (
@@ -31,6 +43,20 @@ def es_gestor_documentos(user):
         ).exists()
     )
 
+
+def es_usuario_documentos(user):
+    return (
+        es_gestor_documentos(user)
+        or user.groups.filter(name="Operario").exists()
+    )
+
+
+def verificar_acceso(user):
+    if not es_usuario_documentos(user):
+        raise PermissionDenied
+
+
+# API REST
 
 class PermisoDocumento(BasePermission):
 
@@ -50,7 +76,9 @@ class PermisoDocumento(BasePermission):
 
 
 class DocumentoViewSet(viewsets.ModelViewSet):
+
     serializer_class = DocumentoSerializer
+
     permission_classes = [
         IsAuthenticated,
         PermisoDocumento
@@ -63,28 +91,16 @@ class DocumentoViewSet(viewsets.ModelViewSet):
     ]
 
     queryset = Documento.objects.select_related(
-        "orden_trabajo",
         "subido_por"
     )
 
     def get_queryset(self):
         user = self.request.user
-        queryset = super().get_queryset()
 
-        if es_gestor_documentos(user):
-            return queryset
+        if es_usuario_documentos(user):
+            return self.queryset
 
-        if user.groups.filter(name="Operario").exists():
-            return queryset.filter(
-                Q(
-                    orden_trabajo__etapas__responsable=user
-                )
-                | Q(
-                    orden_trabajo__etapas__actividades__responsable=user
-                )
-            ).distinct()
-
-        return queryset.none()
+        return self.queryset.none()
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -99,11 +115,10 @@ class DocumentoViewSet(viewsets.ModelViewSet):
             modulo="documentos",
             accion="subida",
             descripcion=(
-                f"Subió el documento '{documento.nombre}' "
-                f"a la orden '{documento.orden_trabajo.numero}'."
+                f"Subió el documento '{documento.nombre}'."
             ),
             objeto_id=documento.id,
-            objeto_referencia=documento.orden_trabajo.numero
+            objeto_referencia=documento.nombre
         )
 
     @transaction.atomic
@@ -115,14 +130,149 @@ class DocumentoViewSet(viewsets.ModelViewSet):
             modulo="documentos",
             accion="eliminacion",
             descripcion=(
-                f"Eliminó el documento '{instance.nombre}' "
-                f"de la orden '{instance.orden_trabajo.numero}'."
+                f"Eliminó el documento '{instance.nombre}'."
             ),
             objeto_id=instance.id,
-            objeto_referencia=instance.orden_trabajo.numero
+            objeto_referencia=instance.nombre
         )
 
         if instance.archivo:
             instance.archivo.delete(save=False)
 
         instance.delete()
+
+
+# INTERFAZ WEB
+
+@login_required
+def documentos_lista(request):
+    verificar_acceso(request.user)
+
+    documentos = Documento.objects.select_related(
+        "subido_por"
+    ).all()
+
+    return render(
+        request,
+        "documentos/doc_lista.html",
+        {
+            "documentos": documentos,
+            "puede_gestionar": es_gestor_documentos(request.user)
+        }
+    )
+
+
+@login_required
+def documento_subir(request):
+    verificar_acceso(request.user)
+
+    if not es_gestor_documentos(request.user):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        form = DocumentoForm(
+            request.POST,
+            request.FILES
+        )
+
+        if form.is_valid():
+            with transaction.atomic():
+                documento = form.save(commit=False)
+                documento.subido_por = request.user
+                documento.save()
+
+                registrar_evento(
+                    usuario=request.user,
+                    modulo="documentos",
+                    accion="subida",
+                    descripcion=(
+                        f"Subió el documento '{documento.nombre}'."
+                    ),
+                    objeto_id=documento.id,
+                    objeto_referencia=documento.nombre
+                )
+
+            return redirect("documentos:lista")
+
+    else:
+        form = DocumentoForm()
+
+    return render(
+        request,
+        "documentos/doc_form.html",
+        {
+            "form": form,
+            "titulo": "Subir documento"
+        }
+    )
+
+
+@login_required
+def documento_detalle(request, pk):
+    verificar_acceso(request.user)
+
+    documento = get_object_or_404(
+        Documento.objects.select_related("subido_por"),
+        pk=pk
+    )
+
+    return render(
+        request,
+        "documentos/doc_detalle.html",
+        {
+            "documento": documento,
+            "puede_gestionar": es_gestor_documentos(request.user)
+        }
+    )
+
+
+@login_required
+def documento_descargar(request, pk):
+    verificar_acceso(request.user)
+
+    documento = get_object_or_404(
+        Documento,
+        pk=pk
+    )
+
+    if not documento.archivo:
+        raise PermissionDenied
+
+    return FileResponse(
+        documento.archivo.open("rb"),
+        as_attachment=True,
+        filename=os.path.basename(documento.archivo.name)
+    )
+
+
+@login_required
+@require_POST
+def documento_eliminar(request, pk):
+    verificar_acceso(request.user)
+
+    if not es_gestor_documentos(request.user):
+        raise PermissionDenied
+
+    documento = get_object_or_404(
+        Documento,
+        pk=pk
+    )
+
+    with transaction.atomic():
+        registrar_evento(
+            usuario=request.user,
+            modulo="documentos",
+            accion="eliminacion",
+            descripcion=(
+                f"Eliminó el documento '{documento.nombre}'."
+            ),
+            objeto_id=documento.id,
+            objeto_referencia=documento.nombre
+        )
+
+        if documento.archivo:
+            documento.archivo.delete(save=False)
+
+        documento.delete()
+
+    return redirect("documentos:lista")

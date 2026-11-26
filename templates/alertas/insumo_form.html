@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ titulo|default:"Nuevo insumo" }} | Kotoduo
+{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN</span>
+
+        <h1>{{ titulo|default:"Nuevo insumo" }}</h1>
+
+        <p>
+            {% if insumo %}
+                Modifica la información y los parámetros de inventario del insumo.
+            {% else %}
+                Registra un nuevo recurso para utilizarlo en los procesos de producción.
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="orders-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Información del insumo</h2>
+            <p>Completa los datos solicitados para guardar el registro.</p>
+        </div>
+    </div>
+
+    <form method="POST" class="inventory-form">
+
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="form-errors">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        {{ form.as_p }}
+
+        <div class="form-actions">
+
+            <button type="submit" class="btn-primary">
+                Guardar insumo
+            </button>
+
+            <a href="{% url 'alertas:inventario' %}" class="btn-clear">
+                Cancelar
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva etapa | Kotoduo{% endblock %}
+
+{% block content %}
+<div class="production-page">
+
+    <!-- Encabezado -->
+    <div class="module-header">
+        <div>
+            <span class="module-eyebrow">GESTIÓN OPERATIVA / PRODUCCIÓN</span>
+            <h1>Nueva etapa</h1>
+            <p>Registra una nueva etapa dentro de una orden de trabajo.</p>
+        </div>
+
+        <div class="module-header-actions">
+            <a href="{% url 'produccion:etapas' %}" class="btn-secondary">
+                ← Volver a etapas
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="order-form-panel">
+
+        <div class="orders-panel-header">
+            <div>
+                <h2>Información de la etapa</h2>
+                <p>Completa los datos necesarios para su registro.</p>
+            </div>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            {% if formulario.non_field_errors %}
+                <div class="form-error-message">
+                    {{ formulario.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="form-grid">
+
+                {% for field in formulario %}
+                    <div class="form-field {% if field.name == 'descripcion' %}form-field-full{% endif %}">
+
+                        <label for="{{ field.id_for_label }}">
+                            {{ field.label }}
+
+                            {% if field.field.required %}
+                                <span class="required-mark">*</span>
+                            {% endif %}
+                        </label>
+
+                        {{ field }}
+
+                        {% if field.help_text %}
+                            <small class="form-help">
+                                {{ field.help_text }}
+                            </small>
+                        {% endif %}
+
+                        {% if field.errors %}
+                            <div class="field-error">
+                                {{ field.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+                {% endfor %}
+
+            </div>
+
+            <div class="form-information">
+                <strong>Importante</strong>
+                <p>
+                    La secuencia determina el orden en que se ejecutarán
+                    las etapas dentro de la orden de trabajo.
+                </p>
+            </div>
+
+            <!-- Acciones -->
+            <div class="form-actions">
+
+                <a href="{% url 'produccion:etapas' %}" class="btn-secondary">
+                    Cancelar
+                </a>
+
+                <button type="submit" class="btn-primary">
+                    Registrar etapa
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+{% endblock %}
+

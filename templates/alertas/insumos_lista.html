@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Insumos | Kotoduo{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN</span>
+        <h1>Insumos</h1>
+        <p>Consulta y administra los insumos utilizados en los procesos de producción.</p>
+    </div>
+
+    {% if puede_gestionar %}
+        <a href="{% url 'alertas:insumo-crear' %}" class="btn-primary">
+            + Nuevo insumo
+        </a>
+    {% endif %}
+</div>
+
+<!-- RESUMEN -->
+<div class="orders-summary">
+
+    <div class="orders-summary-card">
+        <span class="summary-label">Resultados actuales</span>
+        <strong class="summary-value">{{ insumos.paginator.count }}</strong>
+        <span class="summary-description">Insumos según los filtros aplicados</span>
+    </div>
+
+</div>
+
+<!-- LISTADO -->
+<div class="orders-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Listado de insumos</h2>
+            <p>Consulta las existencias y los niveles mínimos de cada recurso.</p>
+        </div>
+
+        <div>
+            <a href="{% url 'alertas:inventario' %}" class="btn-clear">
+                Volver al inventario
+            </a>
+        </div>
+    </div>
+
+    <!-- FILTROS -->
+    <form method="GET" class="orders-filters">
+
+        <div class="orders-search">
+            <input
+                type="text"
+                name="q"
+                placeholder="Buscar por nombre o descripción..."
+                value="{{ busqueda }}"
+            >
+        </div>
+
+        <select name="stock">
+
+            <option value="">Todos los niveles de stock</option>
+
+            <option value="bajo" {% if filtro_stock == "bajo" %}selected{% endif %}>
+                Stock bajo
+            </option>
+
+        </select>
+
+        <button type="submit" class="btn-filter">
+            Filtrar
+        </button>
+
+        <a href="{% url 'alertas:insumos' %}" class="btn-clear">
+            Limpiar
+        </a>
+
+    </form>
+
+    <!-- TABLA -->
+    <div class="orders-table-container">
+
+        <table class="orders-table">
+
+            <thead>
+                <tr>
+                    <th>Insumo</th>
+                    <th>Unidad</th>
+                    <th>Stock actual</th>
+                    <th>Stock mínimo</th>
+                    <th>Estado</th>
+
+                    {% if puede_gestionar %}
+                        <th>Acciones</th>
+                    {% endif %}
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for insumo in insumos %}
+
+                    <tr>
+
+                        <td>
+                            <a
+                                href="{% url 'alertas:insumo-detalle' insumo.pk %}"
+                                class="order-number"
+                            >
+                                {{ insumo.nombre }}
+                            </a>
+
+                            {% if insumo.descripcion %}
+                                <br>
+                                <span class="text-muted">
+                                    {{ insumo.descripcion|truncatechars:90 }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ insumo.unidad_medida }}</td>
+
+                        <td>{{ insumo.stock_actual }}</td>
+
+                        <td>{{ insumo.stock_minimo }}</td>
+
+                        <td>
+
+                            {% if insumo.stock_bajo %}
+
+                                <span class="priority-badge priority-alta">
+                                    Stock bajo
+                                </span>
+
+                            {% else %}
+
+                                <span class="priority-badge priority-media">
+                                    Disponible
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        {% if puede_gestionar %}
+
+                            <td>
+                                <a
+                                    href="{% url 'alertas:insumo-editar' insumo.pk %}"
+                                    class="btn-filter"
+                                >
+                                    Editar
+                                </a>
+                            </td>
+
+                        {% endif %}
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+                        <td colspan="{% if puede_gestionar %}6{% else %}5{% endif %}" class="empty-table">
+
+                            <div class="empty-state">
+                                <strong>No se encontraron insumos</strong>
+                                <p>No existen insumos que coincidan con los criterios de búsqueda.</p>
+                            </div>
+
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- PAGINACIÓN -->
+    {% if insumos.has_other_pages %}
+
+        <div class="orders-pagination">
+
+            <span class="pagination-info">
+                Página {{ insumos.number }} de {{ insumos.paginator.num_pages }}
+            </span>
+
+            <div class="pagination-controls">
+
+                {% if insumos.has_previous %}
+
+                    <a href="?q={{ busqueda|urlencode }}&stock={{ filtro_stock|urlencode }}&page={{ insumos.previous_page_number }}">
+                        Anterior
+                    </a>
+
+                {% endif %}
+
+                {% if insumos.has_next %}
+
+                    <a href="?q={{ busqueda|urlencode }}&stock={{ filtro_stock|urlencode }}&page={{ insumos.next_page_number }}">
+                        Siguiente
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

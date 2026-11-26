@@ -1,0 +1,153 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ insumo.nombre }} | Kotoduo{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">DETALLE DE INVENTARIO</span>
+        <h1>{{ insumo.nombre }}</h1>
+        <p>{{ insumo.descripcion|default:"Información y movimientos del insumo." }}</p>
+    </div>
+
+    <a href="{% url 'alertas:inventario' %}" class="btn-clear">
+        Volver al inventario
+    </a>
+</div>
+
+<!-- ACCIONES -->
+{% if puede_gestionar %}
+    <div class="form-actions">
+        <a
+            href="{% url 'alertas:movimiento-crear' %}?insumo={{ insumo.pk }}"
+            class="btn-primary"
+        >
+            + Registrar movimiento
+        </a>
+
+        <a
+            href="{% url 'alertas:insumo-editar' insumo.pk %}"
+            class="btn-clear"
+        >
+            Editar insumo
+        </a>
+    </div>
+{% endif %}
+
+<!-- RESUMEN DEL INSUMO -->
+<div class="orders-summary">
+
+    <div class="orders-summary-card">
+        <span class="summary-label">Stock actual</span>
+        <strong class="summary-value">{{ insumo.stock_actual }}</strong>
+        <span class="summary-description">{{ insumo.unidad_medida }}</span>
+    </div>
+
+    <div class="orders-summary-card">
+        <span class="summary-label">Stock mínimo</span>
+        <strong class="summary-value">{{ insumo.stock_minimo }}</strong>
+        <span class="summary-description">{{ insumo.unidad_medida }}</span>
+    </div>
+
+    <div class="orders-summary-card">
+        <span class="summary-label">Estado</span>
+
+        <strong class="summary-value">
+            {% if insumo.stock_bajo %}
+                Stock bajo
+            {% else %}
+                Normal
+            {% endif %}
+        </strong>
+
+        <span class="summary-description">Estado de existencias</span>
+    </div>
+
+</div>
+
+<!-- MOVIMIENTOS -->
+<div class="orders-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Movimientos del insumo</h2>
+            <p>Historial de entradas y salidas registradas.</p>
+        </div>
+    </div>
+
+    <div class="orders-table-container">
+
+        <table class="orders-table">
+
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Cantidad</th>
+                    <th>Orden de trabajo</th>
+                    <th>Registrado por</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for movimiento in movimientos %}
+
+                    <tr>
+                        <td>
+                            {{ movimiento.fecha|date:"d/m/Y H:i" }}
+                        </td>
+
+                        <td>
+                            {% if movimiento.tipo == "entrada" %}
+                                <span class="order-status status-completada">
+                                    Entrada
+                                </span>
+                            {% else %}
+                                <span class="order-status status-bloqueada">
+                                    Salida
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ movimiento.cantidad }} {{ insumo.unidad_medida }}
+                        </td>
+
+                        <td>
+                            {% if movimiento.orden_trabajo %}
+                                {{ movimiento.orden_trabajo.numero }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ movimiento.registrado_por }}
+                        </td>
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+                        <td colspan="5" class="empty-table">
+                            <div class="empty-state">
+                                <strong>Sin movimientos registrados</strong>
+                                <p>Este insumo todavía no tiene entradas ni salidas.</p>
+                            </div>
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

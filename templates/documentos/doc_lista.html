@@ -1,0 +1,100 @@
+
+{% extends "base.html" %}
+
+{% block title %}Documentos | Kotoduo{% endblock %}
+{% block page_title %}Documentos{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN</span>
+        <h1>Biblioteca de documentos</h1>
+        <p>Consulta y administra la documentación del sistema.</p>
+    </div>
+
+    {% if puede_gestionar %}
+    <div>
+        <a href="{% url 'documentos:subir' %}" class="btn-primary">
+            + Subir documento
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="orders-panel documents-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Documentos registrados</h2>
+            <p>Listado general de archivos disponibles.</p>
+        </div>
+    </div>
+
+    <div class="orders-table-container">
+
+        <table class="orders-table documents-table">
+
+            <thead>
+                <tr>
+                    <th>Documento</th>
+                    <th>Tipo</th>
+                    <th>Fecha de subida</th>
+                    <th>Subido por</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for documento in documentos %}
+
+                <tr>
+                    <td>
+                        <a href="{% url 'documentos:detalle' documento.pk %}"
+                           class="order-number">
+                            {{ documento.nombre }}
+                        </a>
+                    </td>
+
+                    <td>
+                        <span class="priority-badge priority-media">
+                            {{ documento.get_tipo_display }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {{ documento.fecha_subida|date:"d/m/Y H:i" }}
+                    </td>
+
+                    <td>
+                        {{ documento.subido_por.username }}
+                    </td>
+
+                    <td>
+                        <a href="{% url 'documentos:detalle' documento.pk %}"
+                           class="btn-filter">
+                            Consultar
+                        </a>
+                    </td>
+                </tr>
+
+                {% empty %}
+
+                <tr>
+                    <td colspan="5" class="empty-table">
+                        No hay documentos registrados.
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

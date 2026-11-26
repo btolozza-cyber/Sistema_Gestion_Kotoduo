@@ -1,0 +1,264 @@
+
+{% extends "base.html" %}
+
+{% block title %}Usuarios | Kotoduo{% endblock %}
+{% block page_title %}Gestión de usuarios{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">ADMINISTRACIÓN</span>
+        <h2>Usuarios del sistema</h2>
+        <p>Administra las cuentas y los roles de acceso.</p>
+    </div>
+
+    <a href="{% url 'usuarios:crear' %}" class="btn-primary">
+        + Nuevo usuario
+    </a>
+</div>
+
+<!-- ESTADÍSTICAS -->
+<div class="users-stats">
+
+    <div class="users-stat-card">
+        <span>Total de usuarios</span>
+        <strong>{{ total_usuarios }}</strong>
+    </div>
+
+    <div class="users-stat-card">
+        <span>Usuarios activos</span>
+        <strong>{{ usuarios_activos }}</strong>
+    </div>
+
+    <div class="users-stat-card">
+        <span>Usuarios inactivos</span>
+        <strong>{{ usuarios_inactivos }}</strong>
+    </div>
+
+</div>
+
+<!-- PANEL PRINCIPAL -->
+<div class="users-panel">
+
+    <!-- FILTROS -->
+    <form method="GET" class="users-filters">
+
+        <input
+            type="text"
+            name="buscar"
+            value="{{ buscar }}"
+            placeholder="Buscar por usuario, nombre o correo..."
+        >
+
+        <select name="estado">
+            <option value="">Todos los estados</option>
+
+            <option
+                value="activos"
+                {% if estado == "activos" %}selected{% endif %}
+            >
+                Activos
+            </option>
+
+            <option
+                value="inactivos"
+                {% if estado == "inactivos" %}selected{% endif %}
+            >
+                Inactivos
+            </option>
+        </select>
+
+        <button type="submit" class="btn-filter">
+            Filtrar
+        </button>
+
+        <a href="{% url 'usuarios:lista' %}" class="btn-clear">
+            Limpiar
+        </a>
+
+    </form>
+
+    <!-- MENSAJES -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="users-message {{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- TABLA -->
+    <div class="orders-table-container">
+
+        <table class="orders-table users-table">
+
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Nombre completo</th>
+                    <th>Correo electrónico</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for usuario in usuarios %}
+
+                    <tr>
+
+                        <!-- USUARIO -->
+                        <td>
+                            <span class="order-number">
+                                {{ usuario.username }}
+                            </span>
+                        </td>
+
+                        <!-- NOMBRE -->
+                        <td>
+                            {{ usuario.first_name }}
+                            {{ usuario.last_name }}
+                        </td>
+
+                        <!-- CORREO -->
+                        <td>
+                            {{ usuario.email|default:"Sin correo" }}
+                        </td>
+
+                        <!-- ROL -->
+                        <td>
+
+                            {% with grupo=usuario.groups.first %}
+
+                                {% if grupo.name == "Administrador" %}
+
+                                    <span class="users-role users-role-admin">
+                                        Administrador
+                                    </span>
+
+                                {% elif grupo.name == "Supervisor de producción" %}
+
+                                    <span class="users-role users-role-supervisor">
+                                        Supervisor de producción
+                                    </span>
+
+                                {% elif grupo.name == "Operario" %}
+
+                                    <span class="users-role users-role-operario">
+                                        Operario
+                                    </span>
+
+                                {% elif grupo %}
+
+                                    <span class="users-role users-role-empty">
+                                        {{ grupo.name }}
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="users-role users-role-empty">
+                                        Sin rol
+                                    </span>
+
+                                {% endif %}
+
+                            {% endwith %}
+
+                        </td>
+
+                        <!-- ESTADO -->
+                        <td>
+
+                            {% if usuario.is_active %}
+
+                                <span class="users-status users-status-active">
+                                    Activo
+                                </span>
+
+                            {% else %}
+
+                                <span class="users-status users-status-inactive">
+                                    Inactivo
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <!-- ACCIONES -->
+                        <td>
+
+                            <div class="users-actions">
+
+                                <a
+                                    href="{% url 'usuarios:detalle' usuario.pk %}"
+                                    class="users-action-link"
+                                >
+                                    Ver
+                                </a>
+
+                                <a
+                                    href="{% url 'usuarios:editar' usuario.pk %}"
+                                    class="users-action-link"
+                                >
+                                    Editar
+                                </a>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+                        <td colspan="6" class="users-empty">
+                            No se encontraron usuarios.
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- PAGINACIÓN -->
+    {% if usuarios.has_other_pages %}
+
+        <div class="orders-pagination">
+
+            <span class="pagination-info">
+                Página {{ usuarios.number }}
+                de {{ usuarios.paginator.num_pages }}
+            </span>
+
+            <div class="pagination-controls">
+
+                {% if usuarios.has_previous %}
+                    <a href="?page={{ usuarios.previous_page_number }}&buscar={{ buscar|urlencode }}&estado={{ estado|urlencode }}">
+                        Anterior
+                    </a>
+                {% endif %}
+
+                {% if usuarios.has_next %}
+                    <a href="?page={{ usuarios.next_page_number }}&buscar={{ buscar|urlencode }}&estado={{ estado|urlencode }}">
+                        Siguiente
+                    </a>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

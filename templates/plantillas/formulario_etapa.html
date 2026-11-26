@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Etapa de plantilla | Kotoduo{% endblock %}
+
+{% block content %}
+<div class="module-header">
+    <div>
+        <a href="{% url 'plantillas:detalle' plantilla.pk %}" class="btn-clear">
+            ← Volver a la plantilla
+        </a>
+
+        <h1>{{ titulo|default:"Nueva etapa" }}</h1>
+        <p>Define una etapa del proceso y su área de producción.</p>
+    </div>
+</div>
+
+<div class="orders-panel">
+    <form method="POST">
+        {% csrf_token %}
+
+        {% if formulario.non_field_errors %}
+            <div class="form-errors">
+                {{ formulario.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="form-grid">
+            {% for field in formulario %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                        {% if field.field.required %}*{% endif %}
+                    </label>
+
+                    {{ field }}
+
+                    {% if field.help_text %}
+                        <small>{{ field.help_text }}</small>
+                    {% endif %}
+
+                    {% for error in field.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'plantillas:detalle' plantilla.pk %}" class="btn-secondary">
+                Cancelar
+            </a>
+
+            <button type="submit" class="btn-primary">
+                {{ texto_boton|default:"Guardar etapa" }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Inventario | Kotoduo{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN</span>
+        <h1>Inventario de insumos</h1>
+        <p>Consulta las existencias y controla los niveles de stock de los recursos.</p>
+    </div>
+</div>
+
+<div class="orders-panel inventory-panel">
+
+    <!-- ENCABEZADO Y ACCIONES -->
+    <div class="orders-panel-header">
+        <div>
+            <h2>Listado de insumos</h2>
+            <p>El estado del stock permite identificar los recursos que necesitan reposición.</p>
+        </div>
+
+        <div class="inventory-actions">
+            {% if puede_gestionar %}
+                <a href="{% url 'alertas:movimiento-crear' %}" class="btn-primary">
+                    Gestionar stock
+                </a>
+
+                <a href="{% url 'alertas:insumo-crear' %}" class="btn-filter">
+                    + Nuevo insumo
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- TABLA DE INSUMOS -->
+    <div class="orders-table-container">
+        
+        <table class="orders-table inventory-table">
+            <thead>
+                <tr>
+                    <th>Insumo</th>
+                    <th>Unidad</th>
+                    <th>Stock actual</th>
+                    <th>Stock mínimo</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for insumo in insumos %}
+
+                    <tr>
+                        <td>
+                            <a
+                                href="{% url 'alertas:insumo-detalle' insumo.pk %}"
+                                class="order-number"
+                            >
+                                {{ insumo.nombre }}
+                            </a>
+                        </td>
+
+                        <td>{{ insumo.unidad_medida }}</td>
+
+                        <td>{{ insumo.stock_actual }}</td>
+
+                        <td>{{ insumo.stock_minimo }}</td>
+
+                        <td>
+                            {% if insumo.stock_bajo %}
+                                <span class="priority-badge priority-alta">
+                                    Stock bajo
+                                </span>
+                            {% else %}
+                                <span class="priority-badge priority-media">
+                                    Disponible
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+                        <td colspan="5" class="empty-table">
+                            <div class="empty-state">
+                                <strong>No hay insumos registrados</strong>
+                                <p>Los insumos registrados aparecerán en este listado.</p>
+                            </div>
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

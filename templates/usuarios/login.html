@@ -1,0 +1,70 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar sesión | Kotoduo</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+
+<body class="login-page">
+
+    <main class="login-container">
+
+        <div class="login-card">
+
+            <div class="login-brand">
+                <h1>KOTODUO</h1>
+                <p>Sistema de gestión y seguimiento de producción</p>
+            </div>
+
+            <div class="login-heading">
+                <h2>Iniciar sesión</h2>
+                <p>Ingresa tus credenciales para continuar.</p>
+            </div>
+
+            {% if form.errors %}
+                <div class="login-error">
+                    Usuario o contraseña incorrectos.
+                </div>
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="login-field">
+                    <label for="id_username">Usuario</label>
+                    <input
+                        type="text"
+                        name="username"
+                        id="id_username"
+                        autocomplete="username"
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <div class="login-field">
+                    <label for="id_password">Contraseña</label>
+                    <input
+                        type="password"
+                        name="password"
+                        id="id_password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="login-submit">
+                    Ingresar al sistema
+                </button>
+            </form>
+
+        </div>
+
+    </main>
+
+</body>
+</html>

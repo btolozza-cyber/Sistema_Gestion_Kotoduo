@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de plantilla | Kotoduo{% endblock %}
+
+{% block content %}
+<div class="module-header">
+    <div>
+        <a href="{% url 'plantillas:lista' %}" class="btn-clear">
+            ← Volver a plantillas
+        </a>
+
+        <h1>{{ plantilla.nombre }}</h1>
+
+        <p>
+            {{ plantilla.tipo_orden.nombre }}
+            · Versión {{ plantilla.version }}
+        </p>
+    </div>
+
+    <div class="module-header-actions">
+        <a
+            href="{% url 'plantillas:editar' plantilla.pk %}"
+            class="btn-secondary"
+        >
+            Editar plantilla
+        </a>
+
+        <a
+            href="{% url 'plantillas:etapa-crear' plantilla.pk %}"
+            class="btn-primary"
+        >
+            + Agregar etapa
+        </a>
+    </div>
+</div>
+
+<div class="orders-panel">
+    <div class="panel-header">
+        <h2>Información general</h2>
+
+        {% if plantilla.activa %}
+            <span class="order-status status-completed">Activa</span>
+        {% else %}
+            <span class="order-status status-cancelled">Inactiva</span>
+        {% endif %}
+    </div>
+
+    <div class="form-grid">
+        <div class="form-field">
+            <label>Nombre</label>
+            <p>{{ plantilla.nombre }}</p>
+        </div>
+
+        <div class="form-field">
+            <label>Tipo de orden</label>
+            <p>{{ plantilla.tipo_orden.nombre }}</p>
+        </div>
+
+        <div class="form-field">
+            <label>Versión</label>
+            <p>{{ plantilla.version }}</p>
+        </div>
+
+        <div class="form-field">
+            <label>Fecha de creación</label>
+            <p>{{ plantilla.fecha_creacion|date:"d/m/Y" }}</p>
+        </div>
+
+        <div class="form-field">
+            <label>Descripción</label>
+            <p>{{ plantilla.descripcion|default:"Sin descripción." }}</p>
+        </div>
+    </div>
+
+    <form
+        method="POST"
+        action="{% url 'plantillas:cambiar-estado' plantilla.pk %}"
+        class="form-actions"
+    >
+        {% csrf_token %}
+
+        {% if plantilla.activa %}
+            <button type="submit" class="btn-secondary">
+                Desactivar plantilla
+            </button>
+        {% else %}
+            <button type="submit" class="btn-primary">
+                Activar plantilla
+            </button>
+        {% endif %}
+    </form>
+</div>
+
+<div class="module-header">
+    <div>
+        <h2>Etapas del proceso</h2>
+        <p>Secuencia de trabajo y actividades asociadas a esta plantilla.</p>
+    </div>
+</div>
+
+<div class="orders-panel">
+    {% for etapa in plantilla.etapas.all %}
+        <div class="template-stage">
+            <div class="panel-header">
+                <div>
+                    <span class="summary-label">
+                        Etapa {{ etapa.secuencia }}
+                    </span>
+
+                    <h3>{{ etapa.nombre }}</h3>
+
+                    <p>
+                        Área responsable:
+                        <strong>{{ etapa.area.nombre }}</strong>
+                    </p>
+                </div>
+
+                <a
+                    href="{% url 'plantillas:etapa-editar' etapa.pk %}"
+                    class="btn-secondary"
+                >
+                    Editar etapa
+                </a>
+            </div>
+
+            {% if etapa.descripcion %}
+                <p>{{ etapa.descripcion }}</p>
+            {% endif %}
+
+            <div class="template-activities">
+                <div class="panel-header">
+                    <h4>Actividades</h4>
+
+                    <a
+                        href="{% url 'plantillas:actividad-crear' etapa.pk %}"
+                        class="btn-secondary"
+                    >
+                        + Agregar actividad
+                    </a>
+                </div>
+
+                {% for actividad in etapa.actividades.all %}
+                    <div class="template-activity">
+                        <div>
+                            <strong>
+                                {{ actividad.secuencia }}.
+                                {{ actividad.nombre }}
+                            </strong>
+
+                            {% if actividad.descripcion %}
+                                <p>{{ actividad.descripcion }}</p>
+                            {% endif %}
+                        </div>
+
+                        <a
+                            href="{% url 'plantillas:actividad-editar' actividad.pk %}"
+                            class="btn-clear"
+                        >
+                            Editar
+                        </a>
+                    </div>
+                {% empty %}
+                    <p class="empty-state">
+                        Esta etapa todavía no tiene actividades.
+                    </p>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if not forloop.last %}
+            <div class="divider"></div>
+        {% endif %}
+
+    {% empty %}
+        <div class="empty-state">
+            <h3>Sin etapas registradas</h3>
+            <p>
+                Agrega las etapas que compondrán el proceso de producción.
+            </p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

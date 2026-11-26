@@ -79,7 +79,7 @@ class Actividad(models.Model):
 
     class Estado(models.TextChoices):
         PENDIENTE = "pendiente", "Pendiente"
-        EN_PROCESO = "en_proceso", "En_proceso"
+        EN_PROCESO = "en_proceso", "En proceso"
         COMPLETADA = "completada", "Completada"
 
     etapa = models.ForeignKey(
@@ -98,6 +98,7 @@ class Actividad(models.Model):
 
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True)
+    secuencia = models.PositiveIntegerField(default=1)
 
     estado = models.CharField(
         max_length=20,
@@ -111,7 +112,13 @@ class Actividad(models.Model):
     class Meta:
         verbose_name = "Actividad"
         verbose_name_plural = "Actividades"
-        ordering = ["etapa", "id"]
+        ordering = ["etapa", "secuencia", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["etapa", "secuencia"],
+                name="unique_secuencia_por_etapa"
+            )
+        ]
         indexes = [
             models.Index(fields=["estado"]),
         ]

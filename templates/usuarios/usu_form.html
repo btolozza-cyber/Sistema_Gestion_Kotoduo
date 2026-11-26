@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} | Kotoduo{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">ADMINISTRACIÓN</span>
+        <h2>{{ titulo }}</h2>
+        <p>
+            {% if modo_edicion %}
+                Actualiza los datos y permisos del usuario.
+            {% else %}
+                Registra una nueva cuenta en el sistema.
+            {% endif %}
+        </p>
+    </div>
+
+    <a href="{% url 'usuarios:lista' %}" class="btn-clear">
+        Volver
+    </a>
+</div>
+
+<div class="users-form-panel">
+
+    {% if formulario.errors %}
+        <div class="form-errors">
+            Revisa los campos ingresados. Hay errores en el formulario.
+        </div>
+    {% endif %}
+
+    <form method="POST" class="users-form">
+        {% csrf_token %}
+
+        <div class="users-form-grid">
+
+            <div class="users-form-field">
+                <label for="{{ formulario.username.id_for_label }}">
+                    Nombre de usuario
+                </label>
+                {{ formulario.username }}
+                {{ formulario.username.errors }}
+            </div>
+
+            <div class="users-form-field">
+                <label for="{{ formulario.rol.id_for_label }}">
+                    Rol del usuario
+                </label>
+                {{ formulario.rol }}
+                {{ formulario.rol.errors }}
+            </div>
+
+            <div class="users-form-field">
+                <label for="{{ formulario.first_name.id_for_label }}">
+                    Nombre
+                </label>
+                {{ formulario.first_name }}
+                {{ formulario.first_name.errors }}
+            </div>
+
+            <div class="users-form-field">
+                <label for="{{ formulario.last_name.id_for_label }}">
+                    Apellido
+                </label>
+                {{ formulario.last_name }}
+                {{ formulario.last_name.errors }}
+            </div>
+
+            <div class="users-form-field users-form-full">
+                <label for="{{ formulario.email.id_for_label }}">
+                    Correo electrónico
+                </label>
+                {{ formulario.email }}
+                {{ formulario.email.errors }}
+            </div>
+
+            <div class="users-form-field users-form-full">
+                <label for="{{ formulario.password.id_for_label }}">
+                    {% if modo_edicion %}
+                        Nueva contraseña (opcional)
+                    {% else %}
+                        Contraseña
+                    {% endif %}
+                </label>
+
+                {{ formulario.password }}
+                {{ formulario.password.errors }}
+
+                {% if modo_edicion %}
+                    <small>Déjala vacía para mantener la contraseña actual.</small>
+                {% else %}
+                    <small>Debe contener al menos 8 caracteres.</small>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'usuarios:lista' %}" class="btn-clear">
+                Cancelar
+            </a>
+
+            <button type="submit" class="btn-primary">
+                {% if modo_edicion %}
+                    Guardar cambios
+                {% else %}
+                    Crear usuario
+                {% endif %}
+            </button>
+        </div>
+
+    </form>
+</div>
+
+{% endblock %}

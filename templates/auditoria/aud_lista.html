@@ -1,0 +1,219 @@
+
+{% extends "base.html" %}
+
+{% block title %}Auditoría | Kotoduo{% endblock %}
+{% block page_title %}Auditoría{% endblock %}
+
+{% block content %}
+
+<div class="module-header">
+    <div>
+        <span class="module-eyebrow">ADMINISTRACIÓN</span>
+        <h1>Registro de auditoría</h1>
+        <p>Consulta las acciones realizadas por los usuarios dentro del sistema.</p>
+    </div>
+</div>
+
+<!-- FILTROS -->
+
+<div class="orders-panel audit-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Filtrar registros</h2>
+            <p>Utiliza los filtros para encontrar eventos específicos.</p>
+        </div>
+    </div>
+
+    <form method="GET" class="audit-filters">
+
+        <div class="audit-filter-field">
+            <label for="usuario">Usuario</label>
+            <select name="usuario" id="usuario">
+                <option value="">Todos los usuarios</option>
+
+                {% for usuario in usuarios %}
+                <option value="{{ usuario.id }}"
+                    {% if filtros.usuario == usuario.id|stringformat:"s" %}selected{% endif %}>
+                    {{ usuario.username }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="audit-filter-field">
+            <label for="modulo">Módulo</label>
+            <select name="modulo" id="modulo">
+                <option value="">Todos los módulos</option>
+
+                {% for valor, etiqueta in modulos %}
+                <option value="{{ valor }}"
+                    {% if filtros.modulo == valor %}selected{% endif %}>
+                    {{ etiqueta }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="audit-filter-field">
+            <label for="accion">Acción</label>
+            <select name="accion" id="accion">
+                <option value="">Todas las acciones</option>
+
+                {% for valor, etiqueta in acciones %}
+                <option value="{{ valor }}"
+                    {% if filtros.accion == valor %}selected{% endif %}>
+                    {{ etiqueta }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="audit-filter-field">
+            <label for="fecha_desde">Desde</label>
+            <input
+                type="date"
+                name="fecha_desde"
+                id="fecha_desde"
+                value="{{ filtros.fecha_desde }}">
+        </div>
+
+        <div class="audit-filter-field">
+            <label for="fecha_hasta">Hasta</label>
+            <input
+                type="date"
+                name="fecha_hasta"
+                id="fecha_hasta"
+                value="{{ filtros.fecha_hasta }}">
+        </div>
+
+        <div class="audit-filter-actions">
+            <button type="submit" class="btn-primary">
+                Filtrar
+            </button>
+
+            <a href="{% url 'auditoria:lista' %}" class="btn-clear">
+                Limpiar
+            </a>
+        </div>
+
+    </form>
+
+</div>
+
+<!-- TABLA DE REGISTROS -->
+
+<div class="orders-panel audit-panel">
+
+    <div class="orders-panel-header">
+        <div>
+            <h2>Actividad del sistema</h2>
+            <p>
+                {{ registros.paginator.count }} registro(s) encontrados.
+            </p>
+        </div>
+    </div>
+
+    <div class="orders-table-container">
+
+        <table class="orders-table audit-table">
+
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Módulo</th>
+                    <th>Acción</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                    <th>Detalle</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for registro in registros %}
+
+                <tr>
+                    <td>
+                        <span class="order-name">
+                            {{ registro.usuario.username }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {{ registro.get_modulo_display }}
+                    </td>
+
+                    <td>
+                        <span class="priority-badge priority-media">
+                            {{ registro.get_accion_display }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {{ registro.descripcion|truncatechars:65 }}
+                    </td>
+
+                    <td>
+                        {{ registro.fecha|date:"d/m/Y H:i" }}
+                    </td>
+
+                    <td>
+                        <a href="{% url 'auditoria:detalle' registro.pk %}"
+                           class="btn-filter">
+                            Consultar
+                        </a>
+                    </td>
+                </tr>
+
+                {% empty %}
+
+                <tr>
+                    <td colspan="6" class="empty-table">
+                        No se encontraron registros de auditoría.
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- PAGINACIÓN -->
+
+    {% if registros.has_other_pages %}
+
+    <div class="orders-pagination">
+
+        <div class="pagination-info">
+            Página {{ registros.number }} de {{ registros.paginator.num_pages }}
+        </div>
+
+        <div class="pagination-controls">
+
+            {% if registros.has_previous %}
+            <a href="?page={{ registros.previous_page_number }}&usuario={{ filtros.usuario }}&modulo={{ filtros.modulo }}&accion={{ filtros.accion }}&fecha_desde={{ filtros.fecha_desde }}&fecha_hasta={{ filtros.fecha_hasta }}"
+               class="btn-filter">
+                Anterior
+            </a>
+            {% endif %}
+
+            {% if registros.has_next %}
+            <a href="?page={{ registros.next_page_number }}&usuario={{ filtros.usuario }}&modulo={{ filtros.modulo }}&accion={{ filtros.accion }}&fecha_desde={{ filtros.fecha_desde }}&fecha_hasta={{ filtros.fecha_hasta }}"
+               class="btn-filter">
+                Siguiente
+            </a>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

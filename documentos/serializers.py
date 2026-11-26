@@ -1,12 +1,9 @@
+
 from rest_framework import serializers
 from .models import Documento
 
 
 class DocumentoSerializer(serializers.ModelSerializer):
-    orden_numero = serializers.CharField(
-        source="orden_trabajo.numero",
-        read_only=True
-    )
 
     subido_por_nombre = serializers.CharField(
         source="subido_por.username",
@@ -20,10 +17,9 @@ class DocumentoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Documento
+
         fields = [
             "id",
-            "orden_trabajo",
-            "orden_numero",
             "nombre",
             "archivo",
             "tipo",

@@ -47,6 +47,14 @@ class OrdenTrabajo(models.Model):
         related_name="ordenes"
     )
 
+    plantilla = models.ForeignKey(
+        "plantillas.PlantillaProceso",
+        on_delete=models.PROTECT,
+        related_name="ordenes",
+        null=True,
+        blank=True
+    )
+
     estado = models.CharField(
         max_length=20,
         choices=Estado.choices,
