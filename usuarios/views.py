@@ -62,7 +62,7 @@ class IniciarSesionView(LoginView):
     redirect_authenticated_user = False
 
     def get_success_url(self):
-        return reverse_lazy("dashboard")
+        return reverse_lazy("usuarios:dashboard")
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):

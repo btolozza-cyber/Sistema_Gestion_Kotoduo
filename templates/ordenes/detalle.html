@@ -4,317 +4,308 @@
 {% block title %}{{ orden.numero }} | Kotoduo{% endblock %}
 
 {% block content %}
+
 <div class="detail-page">
 
-  <!-- ENCABEZADO -->
-  <div class="module-header">
-    <div>
-      <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN / DETALLE</span>
-      <h1>{{ orden.numero }}</h1>
-      <p>Información y seguimiento de la orden de trabajo.</p>
-    </div>
+    <!-- ENCABEZADO -->
+    <div class="module-header">
+        <div>
+            <span class="module-eyebrow">GESTIÓN DE PRODUCCIÓN / DETALLE</span>
+            <h1>{{ orden.numero }}</h1>
+            <p>Información y seguimiento de la orden de trabajo.</p>
+        </div>
 
-    <a href="{% url 'ordenes:lista' %}" class="btn-secondary">
-      ← Volver a órdenes
-    </a>
-  </div>
-
-  <!-- MENSAJES -->
-  {% if messages %}
-    {% for message in messages %}
-      <div class="form-information">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
-
-
-  <!-- INFORMACIÓN GENERAL -->
-  <section class="detail-panel">
-
-    <div class="detail-panel-header">
-      <div>
-        <span class="module-eyebrow">INFORMACIÓN GENERAL</span>
-        <h2>{{ orden.nombre }}</h2>
-      </div>
-
-      <span class="order-status status-{{ orden.estado }}">
-        {{ orden.get_estado_display }}
-      </span>
-    </div>
-
-    <div class="detail-info-grid">
-
-      <div class="detail-info-item">
-        <span>Cliente</span>
-        <strong>{{ orden.cliente }}</strong>
-      </div>
-
-      <div class="detail-info-item">
-        <span>Tipo de orden</span>
-        <strong>{{ orden.tipo.nombre|default:"No especificado" }}</strong>
-      </div>
-
-      <div class="detail-info-item">
-        <span>Prioridad</span>
-        <strong>
-          <span class="priority-badge priority-{{ orden.prioridad }}">
-            {{ orden.get_prioridad_display }}
-          </span>
-        </strong>
-      </div>
-
-      <div class="detail-info-item">
-        <span>Fecha de creación</span>
-        <strong>{{ orden.fecha_creacion|date:"d/m/Y" }}</strong>
-      </div>
-
-      <div class="detail-info-item">
-        <span>Fecha de entrega</span>
-        <strong>
-          {% if orden.fecha_entrega %}
-            {{ orden.fecha_entrega|date:"d/m/Y" }}
-          {% else %}
-            Sin fecha definida
-          {% endif %}
-        </strong>
-      </div>
-
-      <div class="detail-info-item">
-        <span>Creada por</span>
-        <strong>{{ orden.creado_por.username|default:"No disponible" }}</strong>
-      </div>
-
-      <div class="detail-info-item">
-        <span>Plantilla de producción</span>
-        <strong>{{ orden.plantilla.nombre|default:"Sin plantilla asignada" }}</strong>
-      </div>
-
-    </div>
-
-    <div class="detail-description">
-      <span>Descripción del trabajo</span>
-      <p>
-        {% if orden.descripcion %}
-          {{ orden.descripcion|linebreaksbr }}
+        {% if request.GET.origen == "produccion" %}
+            <a href="{% url 'produccion:etapas' %}" class="btn-secondary">
+                ← Volver a producción
+            </a>
         {% else %}
-          No se ha registrado una descripción.
+            <a href="{% url 'ordenes:lista' %}" class="btn-secondary">
+                ← Volver a órdenes
+            </a>
         {% endif %}
-      </p>
     </div>
 
-    <!-- INICIAR PRODUCCIÓN -->
-    {% if puede_gestionar and orden.estado == "pendiente" and orden.plantilla and not etapas %}
+    <!-- INFORMACIÓN GENERAL -->
+    <section class="detail-panel">
 
-      <div class="form-information">
-        <strong>Orden preparada para producción</strong>
-        <p>
-          Las etapas y actividades se generarán desde la plantilla seleccionada.
-        </p>
-      </div>
-
-      <div class="order-form-actions">
-        <form method="POST" action="{% url 'ordenes:iniciar-produccion' orden.pk %}">
-          {% csrf_token %}
-          <button type="submit" class="btn-primary">
-            Iniciar producción
-          </button>
-        </form>
-      </div>
-
-    {% endif %}
-
-  </section>
-
-
-  <!-- SEGUIMIENTO DE PRODUCCIÓN -->
-  <section class="detail-panel">
-
-    <div class="detail-panel-header">
-      <div>
-        <span class="module-eyebrow">PROCESO PRODUCTIVO</span>
-        <h2>Seguimiento de producción</h2>
-        <p>Avance de las etapas generadas desde la plantilla.</p>
-      </div>
-    </div>
-
-    <div class="production-timeline">
-
-      {% for etapa in etapas %}
-
-        <article class="production-stage">
-
-          <!-- ENCABEZADO DE ETAPA -->
-          <div class="stage-heading">
-
-            <div class="stage-title">
-
-              <span class="stage-sequence">
-                {{ etapa.secuencia|stringformat:"02d" }}
-              </span>
-
-              <div>
-                <h3>{{ etapa.nombre }}</h3>
-
-                <span class="stage-area">
-                  {{ etapa.area.nombre|default:"Área no especificada" }}
-                </span>
-              </div>
-
+        <div class="detail-panel-header">
+            <div>
+                <span class="module-eyebrow">INFORMACIÓN GENERAL</span>
+                <h2>{{ orden.nombre }}</h2>
             </div>
 
-            <span class="order-status status-{{ etapa.estado }}">
-              {{ etapa.get_estado_display }}
+            <span class="order-status status-{{ orden.estado }}">
+                {{ orden.get_estado_display }}
             </span>
+        </div>
 
-          </div>
+        <div class="detail-info-grid">
 
+            <div class="detail-info-item">
+                <span>Cliente</span>
+                <strong>{{ orden.cliente }}</strong>
+            </div>
 
-          <!-- DESCRIPCIÓN -->
-          {% if etapa.descripcion %}
-            <p class="stage-description">
-              {{ etapa.descripcion }}
+            <div class="detail-info-item">
+                <span>Tipo de orden</span>
+                <strong>{{ orden.tipo.nombre|default:"No especificado" }}</strong>
+            </div>
+
+            <div class="detail-info-item">
+                <span>Prioridad</span>
+                <strong>
+                    <span class="priority-badge priority-{{ orden.prioridad }}">
+                        {{ orden.get_prioridad_display }}
+                    </span>
+                </strong>
+            </div>
+
+            <div class="detail-info-item">
+                <span>Fecha de creación</span>
+                <strong>{{ orden.fecha_creacion|date:"d/m/Y" }}</strong>
+            </div>
+
+            <div class="detail-info-item">
+                <span>Fecha de entrega</span>
+                <strong>
+                    {% if orden.fecha_entrega %}
+                        {{ orden.fecha_entrega|date:"d/m/Y" }}
+                    {% else %}
+                        Sin fecha definida
+                    {% endif %}
+                </strong>
+            </div>
+
+            <div class="detail-info-item">
+                <span>Creada por</span>
+                <strong>{{ orden.creado_por.username|default:"No disponible" }}</strong>
+            </div>
+
+            <div class="detail-info-item">
+                <span>Plantilla de producción</span>
+                <strong>{{ orden.plantilla.nombre|default:"Sin plantilla asignada" }}</strong>
+            </div>
+
+        </div>
+
+        <div class="detail-description">
+            <span>Descripción del trabajo</span>
+            <p>
+                {% if orden.descripcion %}
+                    {{ orden.descripcion|linebreaksbr }}
+                {% else %}
+                    No se ha registrado una descripción.
+                {% endif %}
             </p>
-          {% endif %}
+        </div>
 
+        <!-- INICIAR PRODUCCIÓN -->
+        {% if puede_gestionar and orden.estado == "pendiente" and orden.plantilla and not etapas %}
 
-          <!-- FECHAS -->
-          {% if etapa.fecha_inicio %}
-
-            <p class="stage-description">
-              Inicio: {{ etapa.fecha_inicio|date:"d/m/Y H:i" }}
-
-              {% if etapa.fecha_fin %}
-                · Finalización: {{ etapa.fecha_fin|date:"d/m/Y H:i" }}
-              {% endif %}
-            </p>
-
-          {% endif %}
-
-
-          <!-- CONTROLES DEL ADMINISTRADOR -->
-          {% if puede_gestionar and orden.estado == "en_proceso" %}
+            <div class="form-information">
+                <strong>Orden preparada para producción</strong>
+                <p>
+                    Las etapas y actividades se generarán desde la plantilla seleccionada.
+                </p>
+            </div>
 
             <div class="order-form-actions">
-
-              {% if etapa.puede_iniciar %}
-
-                <form method="POST" action="{% url 'produccion:etapa-estado' etapa.pk %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="estado" value="en_proceso">
-
-                  <button type="submit" class="btn-primary">
-                    Iniciar etapa
-                  </button>
+                <form method="POST" action="{% url 'ordenes:iniciar-produccion' orden.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary">
+                        Iniciar producción
+                    </button>
                 </form>
-
-              {% endif %}
-
-
-              {% if etapa.puede_completar %}
-
-                <form method="POST" action="{% url 'produccion:etapa-estado' etapa.pk %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="estado" value="completada">
-
-                  <button type="submit" class="btn-primary">
-                    Aceptar y completar
-                  </button>
-                </form>
-
-              {% endif %}
-
-
-              {% if etapa.puede_bloquear %}
-
-                <form method="POST" action="{% url 'produccion:etapa-estado' etapa.pk %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="estado" value="bloqueada">
-
-                  <button type="submit" class="btn-secondary">
-                    Bloquear
-                  </button>
-                </form>
-
-              {% endif %}
-
-
-              {% if etapa.puede_reanudar %}
-
-                <form method="POST" action="{% url 'produccion:etapa-estado' etapa.pk %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="estado" value="en_proceso">
-
-                  <button type="submit" class="btn-secondary">
-                    Reanudar etapa
-                  </button>
-                </form>
-
-              {% endif %}
-
-
-              {% if etapa.estado == "pendiente" and not etapa.habilitada %}
-                <span class="text-muted">
-                  Disponible al completar la etapa anterior.
-                </span>
-              {% endif %}
-
             </div>
 
-          {% endif %}
+        {% endif %}
 
+    </section>
 
-          <!-- ACTIVIDADES INFORMATIVAS -->
-          <div class="activities-section">
+    <!-- SEGUIMIENTO DE PRODUCCIÓN -->
+    <section class="detail-panel">
 
-            <h4>Actividades definidas en la plantilla</h4>
+        <div class="detail-panel-header">
+            <div>
+                <span class="module-eyebrow">PROCESO PRODUCTIVO</span>
+                <h2>Seguimiento de producción</h2>
+                <p>Avance de las etapas generadas desde la plantilla.</p>
+            </div>
+        </div>
 
-            {% for actividad in etapa.actividades.all %}
+        <div class="production-timeline">
 
-              <div class="activity-item">
+            {% for etapa in etapas %}
 
-                <div class="activity-main">
+                <article class="production-stage">
 
-                  <span class="activity-indicator"></span>
+                    <!-- ENCABEZADO DE ETAPA -->
+                    <div class="stage-heading">
 
-                  <div>
-                    <strong>
-                      {{ actividad.secuencia }}. {{ actividad.nombre }}
-                    </strong>
+                        <div class="stage-title">
 
-                    {% if actividad.descripcion %}
-                      <p>{{ actividad.descripcion }}</p>
+                            <span class="stage-sequence">
+                                {{ etapa.secuencia|stringformat:"02d" }}
+                            </span>
+
+                            <div>
+                                <h3>{{ etapa.nombre }}</h3>
+
+                                <span class="stage-area">
+                                    {{ etapa.area.nombre|default:"Área no especificada" }}
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <span class="order-status status-{{ etapa.estado }}">
+                            {{ etapa.get_estado_display }}
+                        </span>
+
+                    </div>
+
+                    <!-- DESCRIPCIÓN -->
+                    {% if etapa.descripcion %}
+                        <p class="stage-description">
+                            {{ etapa.descripcion }}
+                        </p>
                     {% endif %}
-                  </div>
 
-                </div>
+                    <!-- FECHAS -->
+                    {% if etapa.fecha_inicio %}
 
-              </div>
+                        <p class="stage-description">
+                            Inicio: {{ etapa.fecha_inicio|date:"d/m/Y H:i" }}
+
+                            {% if etapa.fecha_fin %}
+                                · Finalización: {{ etapa.fecha_fin|date:"d/m/Y H:i" }}
+                            {% endif %}
+                        </p>
+
+                    {% endif %}
+
+                    <!-- CONTROLES -->
+                    {% if puede_gestionar and orden.estado == "en_proceso" %}
+
+                        <div class="order-form-actions">
+
+                            {% if etapa.puede_iniciar %}
+
+                                <form method="POST" action="{% url 'produccion:etapa-estado' etapa.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="estado" value="en_proceso">
+
+                                    <button type="submit" class="btn-primary">
+                                        Iniciar etapa
+                                    </button>
+                                </form>
+
+                            {% endif %}
+
+                            {% if etapa.puede_completar %}
+
+                                <form method="POST" action="{% url 'produccion:etapa-estado' etapa.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="estado" value="completada">
+
+                                    <button type="submit" class="btn-primary">
+                                        Aceptar y completar
+                                    </button>
+                                </form>
+
+                            {% endif %}
+
+                            {% if etapa.puede_bloquear %}
+
+                                <form method="POST" action="{% url 'produccion:etapa-estado' etapa.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="estado" value="bloqueada">
+
+                                    <button type="submit" class="btn-secondary">
+                                        Bloquear
+                                    </button>
+                                </form>
+
+                            {% endif %}
+
+                            {% if etapa.puede_reanudar %}
+
+                                <form method="POST" action="{% url 'produccion:etapa-estado' etapa.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="estado" value="en_proceso">
+
+                                    <button type="submit" class="btn-secondary">
+                                        Reanudar etapa
+                                    </button>
+                                </form>
+
+                            {% endif %}
+
+                            {% if etapa.estado == "pendiente" and not etapa.habilitada %}
+                                <span class="text-muted">
+                                    Disponible al completar la etapa anterior.
+                                </span>
+                            {% endif %}
+
+                        </div>
+
+                    {% endif %}
+
+                    <!-- ACTIVIDADES -->
+                    <div class="activities-section">
+
+                        <h4>Actividades definidas en la plantilla</h4>
+
+                        {% for actividad in etapa.actividades.all %}
+
+                            <div class="activity-item">
+
+                                <div class="activity-main">
+
+                                    <span class="activity-indicator"></span>
+
+                                    <div>
+                                        <strong>
+                                            {{ actividad.secuencia }}. {{ actividad.nombre }}
+                                        </strong>
+
+                                        {% if actividad.descripcion %}
+                                            <p>{{ actividad.descripcion }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        {% empty %}
+
+                            <p class="detail-empty">
+                                Esta etapa no tiene actividades detalladas.
+                            </p>
+
+                        {% endfor %}
+
+                    </div>
+
+                </article>
 
             {% empty %}
 
-              <p class="detail-empty">
-                Esta etapa no tiene actividades detalladas.
-              </p>
+                <div class="detail-empty-state">
+                    <h3>Sin etapas de producción</h3>
+                    <p>
+                        La producción todavía no se ha iniciado para esta orden.
+                    </p>
+                </div>
 
             {% endfor %}
 
-          </div>
-
-        </article>
-
-      {% empty %}
-
-        <div class="detail-empty-state">
-          <h3>Sin etapas de producción</h3>
-          <p>
-            La producción todavía no se ha iniciado para esta orden.
-          </p>
         </div>
 
-      {% endfor %}
-
-    </div>
-
-  </section>
+    </section>
 
 </div>
+
 {% endblock %}

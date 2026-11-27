@@ -1,6 +1,16 @@
+
+from django.core.validators import RegexValidator
+from django.utils import timezone
+
 from rest_framework import serializers
 
 from .models import TipoOrden, OrdenTrabajo
+
+
+validador_texto = RegexValidator(
+    regex=r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .,'&()/-]*$",
+    message="Utiliza solamente letras, números, espacios y puntuación habitual."
+)
 
 
 class TipoOrdenSerializer(serializers.ModelSerializer):
@@ -16,6 +26,16 @@ class TipoOrdenSerializer(serializers.ModelSerializer):
 
 
 class OrdenTrabajoSerializer(serializers.ModelSerializer):
+
+    nombre = serializers.CharField(
+        max_length=150,
+        validators=[validador_texto],
+    )
+
+    cliente = serializers.CharField(
+        max_length=150,
+        validators=[validador_texto],
+    )
 
     tipo_nombre = serializers.CharField(
         source="tipo.nombre",
@@ -71,3 +91,11 @@ class OrdenTrabajoSerializer(serializers.ModelSerializer):
             "fecha_creacion",
             "creado_por",
         ]
+
+    def validate_fecha_entrega(self, fecha):
+        if fecha and fecha < timezone.localdate():
+            raise serializers.ValidationError(
+                "La fecha de entrega no puede ser anterior al día actual."
+            )
+
+        return fecha

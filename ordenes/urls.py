@@ -9,6 +9,7 @@ from .views import (
     orden_detalle,
     orden_iniciar_produccion,
     orden_cancelar,
+    orden_eliminar,
 )
 
 app_name = "ordenes"
@@ -41,6 +42,12 @@ urlpatterns = [
         "<int:pk>/cancelar/",
         orden_cancelar,
         name="cancelar"
+    ),
+
+    path(
+        "<int:pk>/eliminar/",
+        orden_eliminar,
+        name="eliminar"
     ),
 
     path("<int:pk>/", orden_detalle, name="detalle"),

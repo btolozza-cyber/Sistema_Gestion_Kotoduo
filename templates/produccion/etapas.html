@@ -1,16 +1,213 @@
+
 {% extends "base.html" %}
+
 {% block title %}Etapas de producción | Kotoduo{% endblock %}
+
 {% block content %}
+
 <div class="production-page">
-  <div class="module-header"><div><span class="module-eyebrow">GESTIÓN OPERATIVA / PRODUCCIÓN</span><h1>Etapas de producción</h1><p>Consulta y supervisa las fases de trabajo de todas las órdenes.</p></div><div class="module-header-actions"><a href="{% url 'produccion:inicio' %}" class="btn-secondary">← Volver a producción</a></div></div>
-  <div class="orders-summary"><div class="orders-summary-card"><span class="summary-label">Etapas registradas</span><strong class="summary-value">{{ total_etapas }}</strong><span class="summary-description">Todas las órdenes</span></div><div class="orders-summary-card"><span class="summary-label">Resultados actuales</span><strong class="summary-value">{{ etapas.paginator.count }}</strong><span class="summary-description">Según filtros</span></div></div>
-  <div class="orders-panel"><div class="orders-panel-header"><div><h2>Listado de etapas</h2><p>Consulta las órdenes, áreas y estados.</p></div></div>
-    <form method="GET" class="orders-filters"><div class="orders-search"><input type="text" name="q" placeholder="Buscar etapa, orden o área..." value="{{ busqueda }}"></div><select name="estado"><option value="">Todos los estados</option>{% for valor, etiqueta in estados %}<option value="{{ valor }}" {% if estado_seleccionado == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}</select><button type="submit" class="btn-filter">Filtrar</button><a href="{% url 'produccion:etapas' %}" class="btn-clear">Limpiar</a></form>
-    <div class="orders-table-container"><table class="orders-table"><thead><tr><th>Orden</th><th>Etapa</th><th>Área</th><th>Secuencia</th><th>Actividades</th><th>Estado</th></tr></thead><tbody>
-    {% for etapa in etapas %}<tr><td><a href="{% url 'ordenes:detalle' etapa.orden_trabajo.pk %}" class="order-number">{{ etapa.orden_trabajo.numero }}</a></td><td><span class="order-name">{{ etapa.nombre }}</span></td><td>{{ etapa.area.nombre|default:"—" }}</td><td>{{ etapa.secuencia }}</td><td>{{ etapa.actividades.count }}</td><td><span class="order-status status-{{ etapa.estado }}">{{ etapa.get_estado_display }}</span></td></tr>
-    {% empty %}<tr><td colspan="6" class="empty-table"><div class="empty-state"><strong>No se encontraron etapas</strong><p>No existen etapas que coincidan con los criterios de búsqueda.</p></div></td></tr>{% endfor %}
-    </tbody></table></div>
-    {% if etapas.has_other_pages %}<div class="orders-pagination"><span class="pagination-info">Página {{ etapas.number }} de {{ etapas.paginator.num_pages }}</span><div class="pagination-controls">{% if etapas.has_previous %}<a href="?q={{ busqueda|urlencode }}&estado={{ estado_seleccionado|urlencode }}&page={{ etapas.previous_page_number }}">Anterior</a>{% endif %}{% if etapas.has_next %}<a href="?q={{ busqueda|urlencode }}&estado={{ estado_seleccionado|urlencode }}&page={{ etapas.next_page_number }}">Siguiente</a>{% endif %}</div></div>{% endif %}
-  </div>
+
+    <!-- ENCABEZADO -->
+    <div class="module-header">
+        <div>
+            <span class="module-eyebrow">GESTIÓN OPERATIVA / PRODUCCIÓN</span>
+            <h1>Seguimiento de producción</h1>
+            <p>Consulta el avance y la etapa actual de cada orden de trabajo.</p>
+        </div>
+
+        <div class="module-header-actions">
+            <a href="{% url 'produccion:inicio' %}" class="btn-secondary">
+                ← Volver a producción
+            </a>
+        </div>
+    </div>
+
+    <!-- RESUMEN -->
+    <div class="orders-summary">
+
+        <div class="orders-summary-card">
+            <span class="summary-label">Órdenes registradas</span>
+            <strong class="summary-value">{{ total_etapas }}</strong>
+            <span class="summary-description">Órdenes con etapas de producción</span>
+        </div>
+
+        <div class="orders-summary-card">
+            <span class="summary-label">Resultados actuales</span>
+            <strong class="summary-value">{{ etapas.paginator.count }}</strong>
+            <span class="summary-description">Según los filtros aplicados</span>
+        </div>
+
+    </div>
+
+    <!-- LISTADO -->
+    <div class="orders-panel">
+
+        <div class="orders-panel-header">
+            <div>
+                <h2>Órdenes de producción</h2>
+                <p>Se muestra únicamente la etapa actual de cada orden.</p>
+            </div>
+        </div>
+
+        <!-- FILTROS -->
+        <form method="GET" class="orders-filters">
+
+            <div class="orders-search">
+                <input
+                    type="text"
+                    name="q"
+                    placeholder="Buscar orden, etapa o área..."
+                    value="{{ busqueda }}"
+                >
+            </div>
+
+            <select name="estado">
+                <option value="">Todos los estados</option>
+
+                {% for valor, etiqueta in estados %}
+                    <option
+                        value="{{ valor }}"
+                        {% if estado_seleccionado == valor %}selected{% endif %}
+                    >
+                        {{ etiqueta }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="btn-filter">
+                Filtrar
+            </button>
+
+            <a href="{% url 'produccion:etapas' %}" class="btn-clear">
+                Limpiar
+            </a>
+
+        </form>
+
+        <!-- TABLA -->
+        <div class="orders-table-container">
+
+            <table class="orders-table">
+
+                <thead>
+                    <tr>
+                        <th>Orden</th>
+                        <th>Trabajo</th>
+                        <th>Etapa actual</th>
+                        <th>Área</th>
+                        <th>Progreso</th>
+                        <th>Actividades</th>
+                        <th>Estado</th>
+                        <th>Detalle</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for registro in etapas %}
+
+                        <tr>
+
+                            <td>
+                                <a
+                                    href="{% url 'ordenes:detalle' registro.pk %}?origen=produccion"
+                                    class="order-number"
+                                >
+                                    {{ registro.numero }}
+                                </a>
+                            </td>
+
+                            <td>
+                                <span class="order-name">
+                                    {{ registro.nombre }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="order-name">
+                                    {{ registro.etapa_actual.nombre }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ registro.etapa_actual.area.nombre|default:"—" }}
+                            </td>
+
+                            <td>
+                                {{ registro.etapa_actual.secuencia }} / {{ registro.total_etapas }}
+                            </td>
+
+                            <td>
+                                {{ registro.etapa_actual.actividades.all|length }}
+                            </td>
+
+                            <td>
+                                <span class="order-status status-{{ registro.etapa_actual.estado }}">
+                                    {{ registro.etapa_actual.get_estado_display }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <a
+                                    href="{% url 'ordenes:detalle' registro.pk %}?origen=produccion"
+                                    class="btn-secondary"
+                                >
+                                    Ver detalle
+                                </a>
+                            </td>
+
+                        </tr>
+
+                    {% empty %}
+
+                        <tr>
+                            <td colspan="8" class="empty-table">
+                                <div class="empty-state">
+                                    <strong>No se encontraron órdenes</strong>
+                                    <p>No existen órdenes que coincidan con los criterios de búsqueda.</p>
+                                </div>
+                            </td>
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <!-- PAGINACIÓN -->
+        {% if etapas.has_other_pages %}
+
+            <div class="orders-pagination">
+
+                <span class="pagination-info">
+                    Página {{ etapas.number }} de {{ etapas.paginator.num_pages }}
+                </span>
+
+                <div class="pagination-controls">
+
+                    {% if etapas.has_previous %}
+                        <a href="?q={{ busqueda|urlencode }}&estado={{ estado_seleccionado|urlencode }}&page={{ etapas.previous_page_number }}">
+                            Anterior
+                        </a>
+                    {% endif %}
+
+                    {% if etapas.has_next %}
+                        <a href="?q={{ busqueda|urlencode }}&estado={{ estado_seleccionado|urlencode }}&page={{ etapas.next_page_number }}">
+                            Siguiente
+                        </a>
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
 </div>
+
 {% endblock %}

@@ -162,8 +162,9 @@
                             {% endif %}
                         </td>
 
-                        <td>
-                            {% if puede_cancelar and orden.estado == "pendiente" %}
+                        <td class="order-actions">
+
+                            {% if orden.estado == "pendiente" and puede_cancelar %}
                                 <form
                                     method="POST"
                                     action="{% url 'ordenes:cancelar' orden.pk %}"
@@ -174,9 +175,25 @@
                                         Cancelar
                                     </button>
                                 </form>
-                            {% else %}
+                            {% endif %}
+
+                            {% if puede_eliminar %}
+                                <form
+                                    method="POST"
+                                    action="{% url 'ordenes:eliminar' orden.pk %}"
+                                    onsubmit="return confirm('¿Eliminar definitivamente esta orden? Esta acción no se puede deshacer.');"
+                                >
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-delete-order">
+                                        Eliminar
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            {% if not puede_eliminar and not puede_cancelar %}
                                 <span class="text-muted">—</span>
                             {% endif %}
+
                         </td>
                     </tr>
 

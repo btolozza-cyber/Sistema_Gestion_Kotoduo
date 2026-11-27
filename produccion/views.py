@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import transaction, models
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -10,7 +10,11 @@ from django.views.decorators.http import require_POST
 
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import (
+    BasePermission,
+    IsAuthenticated,
+    SAFE_METHODS,
+)
 from rest_framework.response import Response
 
 from auditoria.services import registrar_evento
@@ -33,20 +37,35 @@ from .serializers import (
 
 from ordenes.models import OrdenTrabajo
 
-
-# ==========================================================
-# PERMISOS Y FUNCIONES AUXILIARES
-# ==========================================================
-
 def es_administrador(usuario):
     return (
-        usuario.is_superuser
-        or usuario.groups.filter(name="Administrador").exists()
+        usuario.is_authenticated
+        and (
+            usuario.is_superuser
+            or usuario.groups.filter(name="Administrador").exists()
+        )
     )
 
 
 def puede_gestionar(usuario):
+    """
+    Permite administrar áreas de producción.
+    Exclusivo del Administrador.
+    """
     return es_administrador(usuario)
+
+
+def puede_gestionar_etapas(usuario):
+    """
+    Permite gestionar el avance de producción.
+    Administrador y Supervisor de producción.
+    """
+    return (
+        es_administrador(usuario)
+        or usuario.groups.filter(
+            name="Supervisor de producción"
+        ).exists()
+    )
 
 
 class SoloLecturaOAdministrador(BasePermission):
@@ -59,10 +78,26 @@ class SoloLecturaOAdministrador(BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        if request.method in ("GET", "HEAD", "OPTIONS"):
+        if request.method in SAFE_METHODS:
             return True
 
         return puede_gestionar(request.user)
+
+
+class SoloLecturaAdministradorOSupervisor(BasePermission):
+    """
+    Todos los usuarios autenticados pueden consultar.
+    Administradores y supervisores pueden modificar.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.method in SAFE_METHODS:
+            return True
+
+        return puede_gestionar_etapas(request.user)
 
 
 def siguiente_etapa_habilitada(etapa):
@@ -80,10 +115,6 @@ def siguiente_etapa_habilitada(etapa):
         estado=EtapaProduccion.Estado.COMPLETADA
     ).exists()
 
-
-# ==========================================================
-# CAMBIO DE ESTADO DE ETAPA
-# ==========================================================
 
 def cambiar_estado_etapa(etapa, nuevo_estado, usuario, observacion=""):
     """
@@ -130,7 +161,6 @@ def cambiar_estado_etapa(etapa, nuevo_estado, usuario, observacion=""):
             "La transición de estado solicitada no está permitida."
         )
 
-    # Bloquear y comprobar la orden asociada.
     orden = OrdenTrabajo.objects.select_for_update().get(
         pk=etapa.orden_trabajo_id
     )
@@ -140,17 +170,17 @@ def cambiar_estado_etapa(etapa, nuevo_estado, usuario, observacion=""):
             "No se pueden modificar etapas de una orden que no está en proceso."
         )
 
-    # Validar que las etapas anteriores estén completadas.
     if (
-    etapa.estado == estados.PENDIENTE
-    and nuevo_estado in {
-        estados.EN_PROCESO,
-        estados.BLOQUEADA,
-    }
-    and not siguiente_etapa_habilitada(etapa)
-    ):raise ValueError(
-        "Primero debes completar las etapas anteriores."
-    )
+        etapa.estado == estados.PENDIENTE
+        and nuevo_estado in {
+            estados.EN_PROCESO,
+            estados.BLOQUEADA,
+        }
+        and not siguiente_etapa_habilitada(etapa)
+    ):
+        raise ValueError(
+            "Primero debes completar las etapas anteriores."
+        )
 
     estado_anterior = etapa.estado
     ahora = timezone.now()
@@ -175,7 +205,6 @@ def cambiar_estado_etapa(etapa, nuevo_estado, usuario, observacion=""):
 
     etapa.save(update_fields=campos)
 
-    # Registrar historial de la etapa.
     HistorialEtapa.objects.create(
         etapa=etapa,
         usuario=usuario,
@@ -197,7 +226,6 @@ def cambiar_estado_etapa(etapa, nuevo_estado, usuario, observacion=""):
         objeto_referencia=orden.numero,
     )
 
-    # Comprobar si todas las etapas de la orden terminaron.
     if nuevo_estado == estados.COMPLETADA:
 
         quedan_etapas_pendientes = (
@@ -225,15 +253,9 @@ def cambiar_estado_etapa(etapa, nuevo_estado, usuario, observacion=""):
                 objeto_referencia=orden.numero,
             )
 
-    # Actualizar el objeto relacionado para las respuestas.
     etapa.orden_trabajo.estado = orden.estado
 
     return True
-
-
-# ==========================================================
-# ÁREAS DE PRODUCCIÓN
-# ==========================================================
 
 class AreaProduccionViewSet(viewsets.ModelViewSet):
 
@@ -294,10 +316,6 @@ class AreaProduccionViewSet(viewsets.ModelViewSet):
         )
 
 
-# ==========================================================
-# ETAPAS DE PRODUCCIÓN
-# ==========================================================
-
 class EtapaProduccionViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = EtapaProduccionSerializer
@@ -314,7 +332,7 @@ class EtapaProduccionViewSet(viewsets.ReadOnlyModelViewSet):
         detail=True,
         methods=["post"],
         url_path="cambiar-estado",
-        permission_classes=[SoloLecturaOAdministrador],
+        permission_classes=[SoloLecturaAdministradorOSupervisor],
     )
     def cambiar_estado(self, request, pk=None):
 
@@ -354,11 +372,6 @@ class EtapaProduccionViewSet(viewsets.ReadOnlyModelViewSet):
         })
 
 
-# ==========================================================
-# ACTIVIDADES
-# SOLO CONSULTA
-# ==========================================================
-
 class ActividadViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = ActividadSerializer
@@ -370,11 +383,114 @@ class ActividadViewSet(viewsets.ReadOnlyModelViewSet):
             "etapa__orden_trabajo",
         )
 
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="cambiar-estado",
+        permission_classes=[SoloLecturaAdministradorOSupervisor],
+    )
+    def cambiar_estado(self, request, pk=None):
 
-# ==========================================================
-# HISTORIAL DE ETAPAS
-# SOLO CONSULTA
-# ==========================================================
+        actividad = self.get_object()
+
+        nuevo_estado = request.data.get("estado", "")
+        observacion = request.data.get("observacion", "")
+
+        if nuevo_estado not in dict(Actividad.Estado.choices):
+            return Response(
+                {"error": "El estado seleccionado no es válido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not isinstance(observacion, str):
+            return Response(
+                {"error": "La observación debe ser un texto."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(observacion) > 500:
+            return Response(
+                {
+                    "error": (
+                        "La observación no puede superar "
+                        "los 500 caracteres."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with transaction.atomic():
+
+                actividad = (
+                    Actividad.objects
+                    .select_for_update()
+                    .get(pk=actividad.pk)
+                )
+
+                estado_anterior = actividad.estado
+
+                if nuevo_estado == estado_anterior:
+                    return Response({
+                        "mensaje": "La actividad ya tenía ese estado."
+                    })
+
+                ahora = timezone.now()
+
+                actividad.estado = nuevo_estado
+                campos = ["estado"]
+
+                if (
+                    nuevo_estado == Actividad.Estado.EN_PROCESO
+                    and actividad.fecha_inicio is None
+                ):
+                    actividad.fecha_inicio = ahora
+                    campos.append("fecha_inicio")
+
+                if nuevo_estado == Actividad.Estado.COMPLETADA:
+                    actividad.fecha_fin = ahora
+                    campos.append("fecha_fin")
+
+                elif estado_anterior == Actividad.Estado.COMPLETADA:
+                    actividad.fecha_fin = None
+                    campos.append("fecha_fin")
+
+                actividad.save(update_fields=campos)
+
+                HistorialActividad.objects.create(
+                    actividad=actividad,
+                    usuario=request.user,
+                    estado_anterior=estado_anterior,
+                    estado_nuevo=nuevo_estado,
+                    observacion=observacion,
+                )
+
+                registrar_evento(
+                    usuario=request.user,
+                    modulo="produccion",
+                    accion="cambio_estado",
+                    descripcion=(
+                        f"La actividad '{actividad.nombre}' "
+                        f"cambió de '{estado_anterior}' "
+                        f"a '{nuevo_estado}'."
+                    ),
+                    objeto_id=actividad.id,
+                    objeto_referencia=actividad.nombre,
+                )
+
+        except ValueError as exc:
+            return Response(
+                {"error": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({
+            "mensaje": (
+                "Estado de la actividad actualizado correctamente."
+            ),
+            "actividad": self.get_serializer(actividad).data,
+        })
+
 
 class HistorialEtapaViewSet(viewsets.ReadOnlyModelViewSet):
 
@@ -388,11 +504,6 @@ class HistorialEtapaViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
 
-# ==========================================================
-# HISTORIAL DE ACTIVIDADES
-# SOLO CONSULTA
-# ==========================================================
-
 class HistorialActividadViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = HistorialActividadSerializer
@@ -405,12 +516,9 @@ class HistorialActividadViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
 
-# ==========================================================
-# PANEL PRINCIPAL DE PRODUCCIÓN
-# ==========================================================
-
 @login_required
 def produccion_inicio(request):
+
     etapas = EtapaProduccion.objects.all()
     actividades = Actividad.objects.all()
 
@@ -432,14 +540,12 @@ def produccion_inicio(request):
         estado=EtapaProduccion.Estado.BLOQUEADA
     ).count()
 
-    # Calcular porcentaje de avance
     porcentaje_completado = (
         round((etapas_completadas / total_etapas) * 100)
         if total_etapas > 0
         else 0
     )
 
-    # Estadísticas de actividades
     total_actividades = actividades.count()
 
     actividades_pendientes = actividades.filter(
@@ -469,50 +575,89 @@ def produccion_inicio(request):
         "actividades_completadas": actividades_completadas,
 
         "puede_gestionar": puede_gestionar(request.user),
+        "puede_cambiar_estado_etapas": puede_gestionar_etapas(
+            request.user
+        ),
     }
 
     return render(
         request,
         "produccion/inicio.html",
-        contexto
+        contexto,
     )
 
 
 
-# ==========================================================
-# LISTADO DE ETAPAS
-# ==========================================================
-
 @login_required
 def etapas_lista(request):
 
-    etapas = (
-        EtapaProduccion.objects
-        .select_related("orden_trabajo", "area")
-        .prefetch_related("actividades")
+    # Obtener órdenes que tengan etapas de producción
+    ordenes = (
+        OrdenTrabajo.objects
+        .filter(etapas__isnull=False)
+        .distinct()
+        .prefetch_related(
+            models.Prefetch(
+                "etapas",
+                queryset=(
+                    EtapaProduccion.objects
+                    .select_related("area")
+                    .prefetch_related("actividades")
+                    .order_by("secuencia")
+                ),
+                to_attr="etapas_ordenadas"
+            )
+        )
+        .order_by("-fecha_creacion")
     )
 
     busqueda = request.GET.get("q", "").strip()
     estado = request.GET.get("estado", "")
 
-    if busqueda:
-        etapas = etapas.filter(
-            Q(nombre__icontains=busqueda)
-            | Q(orden_trabajo__numero__icontains=busqueda)
-            | Q(area__nombre__icontains=busqueda)
+    resultados = []
+
+    for orden in ordenes:
+
+        etapas_ordenadas = orden.etapas_ordenadas
+
+        if not etapas_ordenadas:
+            continue
+
+        # Buscar la primera etapa que todavía no esté completada
+        etapa_actual = next(
+            (
+                etapa
+                for etapa in etapas_ordenadas
+                if etapa.estado != EtapaProduccion.Estado.COMPLETADA
+            ),
+            etapas_ordenadas[-1]
         )
 
-    if estado in dict(EtapaProduccion.Estado.choices):
-        etapas = etapas.filter(estado=estado)
+        # Filtro por búsqueda
+        if busqueda:
+            coincide = (
+                busqueda.lower() in orden.numero.lower()
+                or busqueda.lower() in orden.nombre.lower()
+                or busqueda.lower() in etapa_actual.nombre.lower()
+                or busqueda.lower() in etapa_actual.area.nombre.lower()
+            )
 
-    etapas = etapas.order_by(
-        "orden_trabajo__fecha_creacion",
-        "secuencia",
-    )
+            if not coincide:
+                continue
 
-    total_etapas = etapas.count()
+        # Filtro por estado de la etapa actual
+        if estado and etapa_actual.estado != estado:
+            continue
 
-    pagina = Paginator(etapas, 10).get_page(
+        # Guardar información de la orden y su etapa actual
+        orden.etapa_actual = etapa_actual
+        orden.total_etapas = len(etapas_ordenadas)
+
+        resultados.append(orden)
+
+    total_etapas = len(resultados)
+
+    pagina = Paginator(resultados, 10).get_page(
         request.GET.get("page")
     )
 
@@ -526,20 +671,19 @@ def etapas_lista(request):
             "estados": EtapaProduccion.Estado.choices,
             "total_etapas": total_etapas,
             "puede_gestionar": puede_gestionar(request.user),
+            "puede_cambiar_estado_etapas": puede_gestionar_etapas(
+                request.user
+            ),
         },
     )
 
-
-# ==========================================================
-# CAMBIAR ESTADO DE UNA ETAPA DESDE EL DETALLE DE LA ORDEN
-# ==========================================================
 
 @login_required
 @require_POST
 @transaction.atomic
 def etapa_cambiar_estado(request, pk):
 
-    if not puede_gestionar(request.user):
+    if not puede_gestionar_etapas(request.user):
         raise PermissionDenied(
             "No tienes permisos para modificar el avance de producción."
         )

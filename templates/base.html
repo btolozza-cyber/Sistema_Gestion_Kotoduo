@@ -10,6 +10,7 @@
     <title>{% block title %}Kotoduo{% endblock %}</title>
 
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    {% block extra_css %}{% endblock %}
 </head>
 
 <body>
@@ -19,6 +20,7 @@
     <!-- MENÚ LATERAL -->
     <aside class="sidebar">
 
+        <!-- IDENTIDAD DEL SISTEMA -->
         <div class="sidebar-brand">
             <span class="brand-symbol">K</span>
 
@@ -28,59 +30,69 @@
             </div>
         </div>
 
+        <!-- MÓDULOS GENERALES -->
         <div class="sidebar-section">GENERAL</div>
 
         <nav class="sidebar-nav">
 
-            <a href="/dashboard/" class="nav-link active">
+            <a href="{% url 'usuarios:dashboard' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                 <span>▦</span>
                 Panel principal
             </a>
 
-            <a href="#" class="nav-link">
+            <a href="{% url 'ordenes:lista' %}"
+               class="nav-link {% if request.resolver_match.namespace == 'ordenes' %}active{% endif %}">
                 <span>▤</span>
                 Órdenes de trabajo
             </a>
 
-            <a href="#" class="nav-link">
+            <a href="{% url 'produccion:inicio' %}"
+               class="nav-link {% if request.resolver_match.namespace == 'produccion' %}active{% endif %}">
                 <span>⚙</span>
                 Producción
             </a>
 
-            <a href="#" class="nav-link">
+            <a href="{% url 'alertas:inventario' %}"
+               class="nav-link {% if request.resolver_match.namespace == 'alertas' %}active{% endif %}">
                 <span>◫</span>
                 Inventario
             </a>
 
-            <a href="#" class="nav-link">
+            <a href="{% url 'plantillas:lista' %}"
+               class="nav-link {% if request.resolver_match.namespace == 'plantillas' %}active{% endif %}">
                 <span>▣</span>
                 Plantillas
             </a>
 
-            <a href="#" class="nav-link">
+            <a href="{% url 'documentos:lista' %}"
+               class="nav-link {% if request.resolver_match.namespace == 'documentos' %}active{% endif %}">
                 <span>▧</span>
                 Documentos
             </a>
 
         </nav>
 
+        <!-- ADMINISTRACIÓN -->
         <div class="sidebar-section">ADMINISTRACIÓN</div>
 
         <nav class="sidebar-nav">
 
-            <a href="#" class="nav-link">
+            <a href="{% url 'usuarios:lista' %}"
+               class="nav-link {% if request.resolver_match.namespace == 'usuarios' and request.resolver_match.url_name != 'dashboard' %}active{% endif %}">
                 <span>♙</span>
                 Usuarios
             </a>
 
-            <a href="#" class="nav-link">
+            <a href="{% url 'auditoria:lista' %}"
+               class="nav-link {% if request.resolver_match.namespace == 'auditoria' %}active{% endif %}">
                 <span>◷</span>
                 Auditoría
             </a>
 
         </nav>
 
-        <!-- USUARIO CONECTADO -->
+        <!-- USUARIO CONECTADO Y CIERRE DE SESIÓN -->
         <div class="sidebar-footer">
 
             <div class="sidebar-user">
@@ -91,10 +103,31 @@
 
                 <div class="user-details">
                     <strong>{{ request.user.username|default:"Usuario" }}</strong>
-                    <small>Kotoduo</small>
+
+                    <small>
+                        {% if request.user.is_superuser %}
+                            Administrador
+                        {% else %}
+                            {% for grupo in request.user.groups.all %}
+                                {{ grupo.name }}{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                Usuario
+                            {% endfor %}
+                        {% endif %}
+                    </small>
                 </div>
 
             </div>
+
+            <form method="POST" action="{% url 'usuarios:logout' %}">
+                {% csrf_token %}
+
+                <button type="submit" class="logout-button">
+                    <span>↪</span>
+                    Cerrar sesión
+                </button>
+
+            </form>
 
         </div>
 
@@ -130,8 +163,35 @@
         </header>
 
 
-        <!-- CONTENIDO DINÁMICO DE CADA PÁGINA -->
+        <!-- CONTENIDO DINÁMICO -->
         <main class="main-content">
+
+            <!-- MENSAJES DEL SISTEMA -->
+            {% if messages %}
+                <div class="system-messages">
+
+                    {% for message in messages %}
+                        <div class="system-message message-{{ message.tags }}">
+                            <span class="message-icon">
+                                {% if 'success' in message.tags %}
+                                    ✓
+                                {% elif 'error' in message.tags %}
+                                    !
+                                {% elif 'warning' in message.tags %}
+                                    ⚠
+                                {% else %}
+                                    i
+                                {% endif %}
+                            </span>
+
+                            <span class="message-text">
+                                {{ message }}
+                            </span>
+                        </div>
+                    {% endfor %}
+
+                </div>
+            {% endif %}
 
             {% block content %}
             {% endblock %}
@@ -147,4 +207,3 @@
 
 </body>
 </html>
-

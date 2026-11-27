@@ -1,3 +1,4 @@
+
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission
 
@@ -8,81 +9,149 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         permisos_por_rol = {
+
+            # ==================================================
+            # ADMINISTRADOR
+            # ==================================================
+
             "Administrador": {
+
                 "ordenes": {
-                    "tipoorden": ["add", "view", "change", "delete"],
-                    "ordentrabajo": ["add", "view", "change", "delete"],
+                    "tipoorden": [
+                        "add", "view", "change", "delete"
+                    ],
+                    "ordentrabajo": [
+                        "add", "view", "change", "delete"
+                    ],
                 },
+
                 "produccion": {
-                    "areaproduccion": ["add", "view", "change", "delete"],
-                    "etapaproduccion": ["add", "view", "change", "delete"],
-                    "actividad": ["add", "view", "change", "delete"],
+                    "areaproduccion": [
+                        "add", "view", "change", "delete"
+                    ],
+                    "etapaproduccion": [
+                        "add", "view", "change", "delete"
+                    ],
+                    "actividad": [
+                        "add", "view", "change", "delete"
+                    ],
                     "historialetapa": ["view"],
                     "historialactividad": ["view"],
                 },
+
                 "alertas": {
-                    "insumo": ["add", "view", "change", "delete"],
-                    "alertainsumo": ["add", "view", "change", "delete"],
+                    "insumo": [
+                        "add", "view", "change", "delete"
+                    ],
+                    "alertainsumo": [
+                        "add", "view", "change", "delete"
+                    ],
                 },
+
                 "plantillas": {
-                    "plantillaproceso": ["add", "view", "change", "delete"],
-                    "plantillaetapa": ["add", "view", "change", "delete"],
+                    "plantillaproceso": [
+                        "add", "view", "change", "delete"
+                    ],
+                    "plantillaetapa": [
+                        "add", "view", "change", "delete"
+                    ],
                 },
+
                 "documentos": {
-                    "documento": ["add", "view", "change", "delete"],
+                    "documento": [
+                        "add", "view", "change", "delete"
+                    ],
                 },
             },
+
+            # ==================================================
+            # SUPERVISOR DE PRODUCCIÓN
+            # ==================================================
 
             "Supervisor de producción": {
+
                 "ordenes": {
                     "tipoorden": ["view"],
-                    "ordentrabajo": ["add", "view", "change"],
+                    "ordentrabajo": [
+                        "add", "view", "change"
+                    ],
                 },
+
                 "produccion": {
                     "areaproduccion": ["view"],
-                    "etapaproduccion": ["add", "view", "change"],
-                    "actividad": ["add", "view", "change"],
+                    "etapaproduccion": [
+                        "add", "view", "change"
+                    ],
+                    "actividad": [
+                        "add", "view", "change"
+                    ],
                     "historialetapa": ["view"],
                     "historialactividad": ["view"],
                 },
+
                 "alertas": {
-                    "insumo": ["add", "view", "change"],
-                    "alertainsumo": ["add", "view", "change"],
+                    "insumo": [
+                        "add", "view", "change"
+                    ],
+                    "alertainsumo": [
+                        "add", "view", "change"
+                    ],
                 },
+
                 "plantillas": {
-                    "plantillaproceso": ["add", "view", "change"],
-                    "plantillaetapa": ["add", "view", "change"],
+                    "plantillaproceso": [
+                        "add", "view", "change"
+                    ],
+                    "plantillaetapa": [
+                        "add", "view", "change"
+                    ],
                 },
+
                 "documentos": {
-                    "documento": ["add", "view", "change"],
+                    "documento": [
+                        "add", "view", "change"
+                    ],
                 },
             },
 
+            # ==================================================
+            # OPERARIO
+            # ==================================================
+
             "Operario": {
+
                 "ordenes": {
                     "tipoorden": ["view"],
                     "ordentrabajo": ["view"],
                 },
+
                 "produccion": {
                     "areaproduccion": ["view"],
                     "etapaproduccion": ["view"],
-                    "actividad": ["view", "change"],
+                    "actividad": ["view"],
                     "historialetapa": ["view"],
                     "historialactividad": ["view"],
                 },
+
                 "alertas": {
                     "insumo": ["view"],
                     "alertainsumo": ["add", "view"],
                 },
+
                 "plantillas": {
                     "plantillaproceso": ["view"],
                     "plantillaetapa": ["view"],
                 },
+
                 "documentos": {
                     "documento": ["view"],
                 },
             },
         }
+
+        # ======================================================
+        # CREACIÓN Y ACTUALIZACIÓN DE GRUPOS Y PERMISOS
+        # ======================================================
 
         for nombre_rol, aplicaciones in permisos_por_rol.items():
 
@@ -93,14 +162,16 @@ class Command(BaseCommand):
             permisos = []
 
             for app, modelos in aplicaciones.items():
+
                 for modelo, acciones in modelos.items():
+
                     for accion in acciones:
 
                         codigo = f"{accion}_{modelo}"
 
                         permiso = Permission.objects.get(
                             content_type__app_label=app,
-                            codename=codigo
+                            codename=codigo,
                         )
 
                         permisos.append(permiso)

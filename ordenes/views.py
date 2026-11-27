@@ -6,6 +6,7 @@ from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
+from django.db.models.deletion import ProtectedError
 
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -15,14 +16,15 @@ from .models import TipoOrden, OrdenTrabajo
 from .serializers import TipoOrdenSerializer, OrdenTrabajoSerializer
 from .forms import OrdenTrabajoForm
 
-from produccion.models import EtapaProduccion, Actividad
 from plantillas.models import PlantillaEtapa
 from auditoria.services import registrar_evento
 
-
-# ========================================
-# PERMISOS
-# ========================================
+from produccion.models import (
+    EtapaProduccion,
+    Actividad,
+    HistorialEtapa,
+    HistorialActividad,
+)
 
 def es_administrador(usuario):
     return usuario.is_superuser or usuario.groups.filter(
@@ -30,13 +32,19 @@ def es_administrador(usuario):
     ).exists()
 
 
+def es_supervisor(usuario):
+    return usuario.groups.filter(
+        name="Supervisor de producción"
+    ).exists()
+
+
+def puede_crear_orden(usuario):
+    return es_administrador(usuario) or es_supervisor(usuario)
+
+
 def puede_gestionar(usuario):
     return es_administrador(usuario)
 
-
-# ========================================
-# TIPOS DE ORDEN - API
-# ========================================
 
 class TipoOrdenViewSet(viewsets.ModelViewSet):
 
@@ -112,10 +120,6 @@ class TipoOrdenViewSet(viewsets.ModelViewSet):
         )
 
 
-# ========================================
-# ÓRDENES DE TRABAJO - API
-# ========================================
-
 class OrdenTrabajoViewSet(viewsets.ModelViewSet):
 
     queryset = OrdenTrabajo.objects.all()
@@ -133,7 +137,7 @@ class OrdenTrabajoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         usuario = self.request.user
 
-        if not puede_gestionar(usuario):
+        if not puede_crear_orden(usuario):
             raise PermissionDenied(
                 "No tienes permisos para crear órdenes de trabajo."
             )
@@ -212,9 +216,6 @@ class OrdenTrabajoViewSet(viewsets.ModelViewSet):
         )
 
 
-# ========================================
-# LISTADO DE ÓRDENES
-# ========================================
 
 @login_required
 def ordenes_lista(request):
@@ -276,8 +277,9 @@ def ordenes_lista(request):
         "estados": OrdenTrabajo._meta.get_field("estado").choices,
         "prioridades": OrdenTrabajo._meta.get_field("prioridad").choices,
         "total_ordenes": total_ordenes,
-        "puede_crear": puede_gestionar(usuario),
+        "puede_crear": puede_crear_orden(usuario),
         "puede_cancelar": es_administrador(request.user),
+        "puede_eliminar": es_administrador(request.user),
     }
 
     return render(
@@ -286,9 +288,6 @@ def ordenes_lista(request):
         contexto,
     )
 
-# ========================================
-# CANCELAR ORDEN DE TRABAJO
-# ========================================
 
 @login_required
 @require_POST
@@ -341,16 +340,13 @@ def orden_cancelar(request, pk):
 
     return redirect("ordenes:lista")
 
-# ========================================
-# REGISTRAR NUEVA ORDEN
-# ========================================
 
 @login_required
 def orden_crear(request):
 
     usuario = request.user
 
-    if not puede_gestionar(usuario):
+    if not puede_crear_orden(usuario):
         raise DjangoPermissionDenied(
             "No tienes permisos para crear órdenes de trabajo."
         )
@@ -426,10 +422,6 @@ def orden_crear(request):
     )
 
 
-# ========================================
-# DETALLE DE ORDEN DE TRABAJO
-# ========================================
-
 @login_required
 def orden_detalle(request, pk):
 
@@ -473,13 +465,13 @@ def orden_detalle(request, pk):
         )
 
         etapa.puede_bloquear = (
-              puede_gestionar_usuario
-              and orden.estado == OrdenTrabajo.Estado.EN_PROCESO
-              and anterior_completada
-              and etapa.estado in [
-                  EtapaProduccion.Estado.PENDIENTE,
-                  EtapaProduccion.Estado.EN_PROCESO,
-                  ]
+            puede_gestionar_usuario
+            and orden.estado == OrdenTrabajo.Estado.EN_PROCESO
+            and anterior_completada
+            and etapa.estado in [
+                EtapaProduccion.Estado.PENDIENTE,
+                EtapaProduccion.Estado.EN_PROCESO,
+            ]
         )
 
         etapa.puede_reanudar = (
@@ -502,10 +494,6 @@ def orden_detalle(request, pk):
         },
     )
 
-
-# ========================================
-# INICIAR PRODUCCIÓN DESDE UNA PLANTILLA
-# ========================================
 
 @login_required
 @require_POST
@@ -633,3 +621,79 @@ def orden_iniciar_produccion(request, pk):
     )
 
     return redirect("ordenes:detalle", pk=orden.pk)
+
+
+
+@login_required
+@require_POST
+def orden_eliminar(request, pk):
+    if not es_administrador(request.user):
+        raise DjangoPermissionDenied(
+            "No tienes permisos para eliminar órdenes de trabajo."
+        )
+
+    try:
+        with transaction.atomic():
+
+            orden = get_object_or_404(
+                OrdenTrabajo.objects.select_for_update(),
+                pk=pk
+            )
+
+            numero = orden.numero
+            orden_id = orden.id
+
+            etapas = EtapaProduccion.objects.filter(
+                orden_trabajo=orden
+            )
+
+            actividades = Actividad.objects.filter(
+                etapa__in=etapas
+            )
+
+            HistorialActividad.objects.filter(
+                actividad__in=actividades
+            ).delete()
+
+            HistorialEtapa.objects.filter(
+                etapa__in=etapas
+            ).delete()
+
+            actividades.delete()
+            etapas.delete()
+
+            registrar_evento(
+                usuario=request.user,
+                modulo="ordenes",
+                accion="eliminacion",
+                descripcion=(
+                    f"Eliminó definitivamente la orden "
+                    f"'{numero}' (ID: {orden_id})."
+                ),
+                objeto_id=orden_id,
+                objeto_referencia=numero
+            )
+
+            orden.delete()
+
+    except ProtectedError as error:
+
+        modelos = sorted({
+            obj._meta.verbose_name
+            for obj in error.protected_objects
+        })
+
+        messages.error(
+            request,
+            "No se pudo eliminar la orden. Registros que la protegen: "
+            + ", ".join(modelos)
+        )
+
+        return redirect("ordenes:lista")
+
+    messages.success(
+        request,
+        f"La orden {numero} fue eliminada correctamente."
+    )
+
+    return redirect("ordenes:lista")

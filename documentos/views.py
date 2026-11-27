@@ -1,26 +1,23 @@
+
 import os
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import FileResponse
-from django.shortcuts import (
-    get_object_or_404,
-    redirect,
-    render
-)
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from rest_framework import viewsets
 from rest_framework.permissions import (
     BasePermission,
     SAFE_METHODS,
-    IsAuthenticated
+    IsAuthenticated,
 )
 from rest_framework.parsers import (
     MultiPartParser,
     FormParser,
-    JSONParser
+    JSONParser,
 )
 
 from .models import Documento
@@ -30,16 +27,25 @@ from .serializers import DocumentoSerializer
 from auditoria.services import registrar_evento
 
 
+# ==========================================================
 # PERMISOS
+# ==========================================================
+
+def es_administrador(user):
+    return (
+        user.is_authenticated
+        and (
+            user.is_superuser
+            or user.groups.filter(name="Administrador").exists()
+        )
+    )
+
 
 def es_gestor_documentos(user):
     return (
-        user.is_superuser
+        es_administrador(user)
         or user.groups.filter(
-            name__in=[
-                "Administrador",
-                "Supervisor de producción"
-            ]
+            name="Supervisor de producción"
         ).exists()
     )
 
@@ -56,7 +62,16 @@ def verificar_acceso(user):
         raise PermissionDenied
 
 
+def verificar_administrador(user):
+    if not es_administrador(user):
+        raise PermissionDenied(
+            "Solo un administrador puede eliminar documentos."
+        )
+
+
+# ==========================================================
 # API REST
+# ==========================================================
 
 class PermisoDocumento(BasePermission):
 
@@ -66,13 +81,16 @@ class PermisoDocumento(BasePermission):
         if not user or not user.is_authenticated:
             return False
 
-        if es_gestor_documentos(user):
-            return True
+        # Todos los perfiles autorizados pueden consultar.
+        if request.method in SAFE_METHODS:
+            return es_usuario_documentos(user)
 
-        if user.groups.filter(name="Operario").exists():
-            return request.method in SAFE_METHODS
+        # Solo el Administrador puede eliminar.
+        if request.method == "DELETE":
+            return es_administrador(user)
 
-        return False
+        # Administrador y Supervisor pueden gestionar documentos.
+        return es_gestor_documentos(user)
 
 
 class DocumentoViewSet(viewsets.ModelViewSet):
@@ -81,13 +99,13 @@ class DocumentoViewSet(viewsets.ModelViewSet):
 
     permission_classes = [
         IsAuthenticated,
-        PermisoDocumento
+        PermisoDocumento,
     ]
 
     parser_classes = [
         MultiPartParser,
         FormParser,
-        JSONParser
+        JSONParser,
     ]
 
     queryset = Documento.objects.select_related(
@@ -118,12 +136,34 @@ class DocumentoViewSet(viewsets.ModelViewSet):
                 f"Subió el documento '{documento.nombre}'."
             ),
             objeto_id=documento.id,
-            objeto_referencia=documento.nombre
+            objeto_referencia=documento.nombre,
+        )
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        usuario = self.request.user
+
+        documento = serializer.save()
+
+        registrar_evento(
+            usuario=usuario,
+            modulo="documentos",
+            accion="modificacion",
+            descripcion=(
+                f"Modificó el documento '{documento.nombre}'."
+            ),
+            objeto_id=documento.id,
+            objeto_referencia=documento.nombre,
         )
 
     @transaction.atomic
     def perform_destroy(self, instance):
         usuario = self.request.user
+
+        if not es_administrador(usuario):
+            raise PermissionDenied(
+                "Solo un administrador puede eliminar documentos."
+            )
 
         registrar_evento(
             usuario=usuario,
@@ -133,7 +173,7 @@ class DocumentoViewSet(viewsets.ModelViewSet):
                 f"Eliminó el documento '{instance.nombre}'."
             ),
             objeto_id=instance.id,
-            objeto_referencia=instance.nombre
+            objeto_referencia=instance.nombre,
         )
 
         if instance.archivo:
@@ -142,7 +182,9 @@ class DocumentoViewSet(viewsets.ModelViewSet):
         instance.delete()
 
 
+# ==========================================================
 # INTERFAZ WEB
+# ==========================================================
 
 @login_required
 def documentos_lista(request):
@@ -157,8 +199,9 @@ def documentos_lista(request):
         "documentos/doc_lista.html",
         {
             "documentos": documentos,
-            "puede_gestionar": es_gestor_documentos(request.user)
-        }
+            "puede_gestionar": es_gestor_documentos(request.user),
+            "puede_eliminar": es_administrador(request.user),
+        },
     )
 
 
@@ -172,7 +215,7 @@ def documento_subir(request):
     if request.method == "POST":
         form = DocumentoForm(
             request.POST,
-            request.FILES
+            request.FILES,
         )
 
         if form.is_valid():
@@ -189,7 +232,7 @@ def documento_subir(request):
                         f"Subió el documento '{documento.nombre}'."
                     ),
                     objeto_id=documento.id,
-                    objeto_referencia=documento.nombre
+                    objeto_referencia=documento.nombre,
                 )
 
             return redirect("documentos:lista")
@@ -202,8 +245,8 @@ def documento_subir(request):
         "documentos/doc_form.html",
         {
             "form": form,
-            "titulo": "Subir documento"
-        }
+            "titulo": "Subir documento",
+        },
     )
 
 
@@ -213,7 +256,7 @@ def documento_detalle(request, pk):
 
     documento = get_object_or_404(
         Documento.objects.select_related("subido_por"),
-        pk=pk
+        pk=pk,
     )
 
     return render(
@@ -221,8 +264,9 @@ def documento_detalle(request, pk):
         "documentos/doc_detalle.html",
         {
             "documento": documento,
-            "puede_gestionar": es_gestor_documentos(request.user)
-        }
+            "puede_gestionar": es_gestor_documentos(request.user),
+            "puede_eliminar": es_administrador(request.user),
+        },
     )
 
 
@@ -232,7 +276,7 @@ def documento_descargar(request, pk):
 
     documento = get_object_or_404(
         Documento,
-        pk=pk
+        pk=pk,
     )
 
     if not documento.archivo:
@@ -241,7 +285,7 @@ def documento_descargar(request, pk):
     return FileResponse(
         documento.archivo.open("rb"),
         as_attachment=True,
-        filename=os.path.basename(documento.archivo.name)
+        filename=os.path.basename(documento.archivo.name),
     )
 
 
@@ -249,13 +293,11 @@ def documento_descargar(request, pk):
 @require_POST
 def documento_eliminar(request, pk):
     verificar_acceso(request.user)
-
-    if not es_gestor_documentos(request.user):
-        raise PermissionDenied
+    verificar_administrador(request.user)
 
     documento = get_object_or_404(
         Documento,
-        pk=pk
+        pk=pk,
     )
 
     with transaction.atomic():
@@ -267,7 +309,7 @@ def documento_eliminar(request, pk):
                 f"Eliminó el documento '{documento.nombre}'."
             ),
             objeto_id=documento.id,
-            objeto_referencia=documento.nombre
+            objeto_referencia=documento.nombre,
         )
 
         if documento.archivo:

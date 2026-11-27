@@ -5062,3 +5062,264 @@ a {
         align-items: flex-start;
     }
 }
+
+
+.logout-button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-top: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 8px;
+    background: transparent;
+    color: #c5d2ca;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+    background: rgba(220, 70, 70, 0.12);
+    color: #ff9999;
+    border-color: rgba(255, 100, 100, 0.25);
+}
+
+.logout-button span {
+    font-size: 18px;
+}
+
+
+.access-denied-container {
+    min-height: 65vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+}
+
+.access-denied-card {
+    width: 100%;
+    max-width: 480px;
+    padding: 45px 35px;
+    text-align: center;
+    background: #ffffff;
+    border: 1px solid #e5e9e6;
+    border-radius: 14px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+}
+
+.access-denied-icon {
+    font-size: 48px;
+    margin-bottom: 18px;
+}
+
+.access-denied-card h1 {
+    color: #263b30;
+    font-size: 25px;
+    margin-bottom: 12px;
+}
+
+.access-denied-card p {
+    color: #68766e;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.access-denied-role {
+    display: block;
+    color: #89938d;
+    font-size: 13px;
+    margin: 15px 0 25px;
+}
+
+.access-denied-button {
+    display: inline-block;
+    padding: 12px 22px;
+    background: #285b43;
+    color: #ffffff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s ease;
+}
+
+.access-denied-button:hover {
+    background: #1d4633;
+}
+
+
+/* =========================================
+   ACCIONES DE ÓRDENES DE TRABAJO
+========================================= */
+
+.order-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.order-actions form {
+    margin: 0;
+}
+
+/* BOTÓN CANCELAR */
+
+.btn-cancel-order {
+    padding: 7px 12px;
+    border: 1px solid rgba(220, 160, 60, 0.25);
+    border-radius: 6px;
+    background: rgba(220, 160, 60, 0.10);
+    color: #d6a34f;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel-order:hover {
+    background: rgba(220, 160, 60, 0.20);
+    border-color: rgba(220, 160, 60, 0.45);
+}
+
+/* BOTÓN ELIMINAR */
+
+.btn-delete-order {
+    padding: 7px 12px;
+    border: 1px solid rgba(220, 70, 70, 0.25);
+    border-radius: 6px;
+    background: rgba(220, 70, 70, 0.10);
+    color: #e06b6b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-delete-order:hover {
+    background: rgba(220, 70, 70, 0.20);
+    border-color: rgba(220, 70, 70, 0.45);
+    color: #ff8585;
+    transform: translateY(-1px);
+}
+
+/* ESTADO HOVER Y FOCUS */
+
+.btn-delete-order:focus-visible,
+.btn-cancel-order:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 768px) {
+    .order-actions {
+        gap: 6px;
+    }
+
+    .btn-delete-order,
+    .btn-cancel-order {
+        padding: 6px 9px;
+        font-size: 11px;
+    }
+}
+
+
+/* =========================================
+   MENSAJES DEL SISTEMA
+========================================= */
+
+.system-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.system-message {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 500;
+    animation: message-appear 0.25s ease;
+}
+
+.message-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 23px;
+    height: 23px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.message-text {
+    line-height: 1.5;
+}
+
+/* ÉXITO */
+.message-success {
+    background: rgba(46, 160, 105, 0.10);
+    border-color: rgba(46, 160, 105, 0.25);
+    color: #55bd88;
+}
+
+.message-success .message-icon {
+    background: rgba(46, 160, 105, 0.20);
+}
+
+/* ERROR */
+.message-error {
+    background: rgba(220, 70, 70, 0.10);
+    border-color: rgba(220, 70, 70, 0.25);
+    color: #e87979;
+}
+
+.message-error .message-icon {
+    background: rgba(220, 70, 70, 0.20);
+}
+
+/* ADVERTENCIA */
+.message-warning {
+    background: rgba(220, 160, 60, 0.10);
+    border-color: rgba(220, 160, 60, 0.25);
+    color: #d9aa58;
+}
+
+.message-warning .message-icon {
+    background: rgba(220, 160, 60, 0.20);
+}
+
+/* INFORMACIÓN */
+.message-info {
+    background: rgba(70, 140, 220, 0.10);
+    border-color: rgba(70, 140, 220, 0.25);
+    color: #78aee8;
+}
+
+.message-info .message-icon {
+    background: rgba(70, 140, 220, 0.20);
+}
+
+@keyframes message-appear {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
